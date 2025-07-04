@@ -7,29 +7,34 @@ interface TaxSummaryProps {
 }
 
 export function TaxSummary({ data }: TaxSummaryProps) {
+  const formatValue = (value: number) => {
+    return value.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
   return (
     <Card className="shadow-neumo border-none rounded-2xl">
       <CardHeader>
         <CardTitle>Resumo da Apuração</CardTitle>
-        <CardDescription>Apuração de PIS e COFINS</CardDescription>
+        <CardDescription>Detalhamento da apuração de PIS e COFINS.</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Tributo</TableHead>
-              <TableHead className="text-right">Débito</TableHead>
-              <TableHead className="text-right">Crédito</TableHead>
-              <TableHead className="text-right">Saldo</TableHead>
+              <TableHead>REG</TableHead>
+              <TableHead>Atributo</TableHead>
+              <TableHead className="text-right">Valor</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((item) => (
-              <TableRow key={item.tax}>
-                <TableCell className="font-medium">{item.tax}</TableCell>
-                <TableCell className="text-right">{item.debit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
-                <TableCell className="text-right">{item.credit.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
-                <TableCell className="text-right font-semibold">{item.balance.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</TableCell>
+            {data.map((item, index) => (
+              <TableRow key={index}>
+                <TableCell className="font-medium">{item.reg}</TableCell>
+                <TableCell>{item.atributo}</TableCell>
+                <TableCell className="text-right">{formatValue(item.valor)}</TableCell>
               </TableRow>
             ))}
           </TableBody>

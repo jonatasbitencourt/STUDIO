@@ -7,21 +7,22 @@ export interface ParsedEfdData {
   operationsSummary: {
     direcao: string;
     cfop: string;
-    cst_pis_cof: string;
-    aliq_pis: number;
-    aliq_cof: number;
+    ind_nfe: string;
+    ind_frt: string;
     vlr_tot: number;
     vlr_icms: number;
     vlr_st: number;
     vlr_ipi: number;
-    vlr_bc_pis_cof: number;
     vlr_pis: number;
     vlr_cofins: number;
+    vlr_bc_pis_cof: number;
+    cst_pis_cof: string;
+    aliq_pis: number;
+    aliq_cof: number;
   }[];
   taxSummary: {
-    tax: string;
-    debit: number;
-    credit: number;
-    balance: number;
+    reg: string;
+    atributo: string;
+    valor: number;
   }[];
 }

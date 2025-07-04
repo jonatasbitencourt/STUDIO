@@ -36,7 +36,7 @@ export function RecordDataView({ recordType, records }: RecordDataViewProps) {
               <TableHeader className="sticky top-0 bg-background/80 backdrop-blur-sm z-10">
                 <TableRow>
                   {headers.map(header => (
-                    <TableHead key={header} className="font-bold">{header}</TableHead>
+                    <TableHead key={header} className="font-bold text-xs">{header}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
@@ -44,7 +44,7 @@ export function RecordDataView({ recordType, records }: RecordDataViewProps) {
                 {records.map((record, index) => (
                   <TableRow key={index}>
                     {headers.map(header => (
-                      <TableCell key={`${header}-${index}`}>{record[header]}</TableCell>
+                      <TableCell key={`${header}-${index}`} className="text-xs">{record[header]}</TableCell>
                     ))}
                   </TableRow>
                 ))}

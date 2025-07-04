@@ -29,14 +29,36 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
   };
 
   const operationsSummary = [
-    { direcao: 'Entrada', cfop: '1.101', cst_pis_cof: '50', aliq_pis: 1.65, aliq_cof: 7.60, vlr_tot: 15000.75, vlr_icms: 1800.09, vlr_st: 0, vlr_ipi: 0, vlr_bc_pis_cof: 15000.75, vlr_pis: 247.51, vlr_cofins: 1140.06 },
-    { direcao: 'Saída', cfop: '5.102', cst_pis_cof: '01', aliq_pis: 1.65, aliq_cof: 7.60, vlr_tot: 35000.25, vlr_icms: 4200.03, vlr_st: 0, vlr_ipi: 3500.00, vlr_bc_pis_cof: 35000.25, vlr_pis: 577.50, vlr_cofins: 2660.02 },
-    { direcao: 'Entrada', cfop: '2.101', cst_pis_cof: '50', aliq_pis: 1.65, aliq_cof: 7.60, vlr_tot: 8000.00, vlr_icms: 960.00, vlr_st: 0, vlr_ipi: 0, vlr_bc_pis_cof: 8000.00, vlr_pis: 132.00, vlr_cofins: 608.00 },
+    { direcao: 'Entrada', cfop: '1.101', ind_nfe: '0', ind_frt: '1', vlr_tot: 15000.75, vlr_icms: 1800.09, vlr_st: 0, vlr_ipi: 0, vlr_pis: 247.51, vlr_cofins: 1140.06, vlr_bc_pis_cof: 15000.75, cst_pis_cof: '50', aliq_pis: 1.65, aliq_cof: 7.60 },
+    { direcao: 'Saída', cfop: '5.102', ind_nfe: '1', ind_frt: '0', vlr_tot: 35000.25, vlr_icms: 4200.03, vlr_st: 0, vlr_ipi: 3500.00, vlr_pis: 577.50, vlr_cofins: 2660.02, vlr_bc_pis_cof: 35000.25, cst_pis_cof: '01', aliq_pis: 1.65, aliq_cof: 7.60 },
+    { direcao: 'Entrada', cfop: '2.101', ind_nfe: '0', ind_frt: '9', vlr_tot: 8000.00, vlr_icms: 960.00, vlr_st: 0, vlr_ipi: 0, vlr_pis: 132.00, vlr_cofins: 608.00, vlr_bc_pis_cof: 8000.00, cst_pis_cof: '50', aliq_pis: 1.65, aliq_cof: 7.60 },
   ];
 
   const taxSummary = [
-    { tax: 'PIS', debit: 577.50, credit: 100.00, balance: 477.50 },
-    { tax: 'COFINS', debit: 2660.00, credit: 500.00, balance: 2160.00 },
+    { reg: 'PIS', atributo: 'VL_TOT_CONT', valor: 577.50 },
+    { reg: 'PIS', atributo: 'VL_TOT_CRED_DESC', valor: 100.00 },
+    { reg: 'PIS', atributo: 'VL_TOT_CRED_DESC_ANT', valor: 0.00 },
+    { reg: 'PIS', atributo: 'VL_TOT_CONT_DEVIDO', valor: 477.50 },
+    { reg: 'PIS', atributo: 'VL_RET_FONTE', valor: 0.00 },
+    { reg: 'PIS', atributo: 'VL_OUT_DED', valor: 0.00 },
+    { reg: 'PIS', atributo: 'VL_CONT_NC_RECOLHER', valor: 0.00 },
+    { reg: 'PIS', atributo: 'VL_TOT_CONT_CUM', valor: 0.00 },
+    { reg: 'PIS', atributo: 'VL_RET_FONTE_CUM', valor: 0.00 },
+    { reg: 'PIS', atributo: 'VL_OUT_DED_CUM', valor: 0.00 },
+    { reg: 'PIS', atributo: 'VL_CONT_CUM_RECOLHER', valor: 0.00 },
+    { reg: 'PIS', atributo: 'VL_TOT_CONT_RECOLHER', valor: 0.00 },
+    { reg: 'COFINS', atributo: 'VL_TOT_CONT', valor: 2660.00 },
+    { reg: 'COFINS', atributo: 'VL_TOT_CRED_DESC', valor: 500.00 },
+    { reg: 'COFINS', atributo: 'VL_TOT_CRED_DESC_ANT', valor: 0.00 },
+    { reg: 'COFINS', atributo: 'VL_TOT_CONT_DEVIDO', valor: 2160.00 },
+    { reg: 'COFINS', atributo: 'VL_RET_FONTE', valor: 0.00 },
+    { reg: 'COFINS', atributo: 'VL_OUT_DED', valor: 0.00 },
+    { reg: 'COFINS', atributo: 'VL_CONT_NC_RECOLHER', valor: 0.00 },
+    { reg: 'COFINS', atributo: 'VL_TOT_CONT_CUM', valor: 0.00 },
+    { reg: 'COFINS', atributo: 'VL_RET_FONTE_CUM', valor: 0.00 },
+    { reg: 'COFINS', atributo: 'VL_OUT_DED_CUM', valor: 0.00 },
+    { reg: 'COFINS', atributo: 'VL_CONT_CUM_RECOLHER', valor: 0.00 },
+    { reg: 'COFINS', atributo: 'VL_TOT_CONT_RECOLHER', valor: 0.00 },
   ];
 
   return { records, operationsSummary, taxSummary };
