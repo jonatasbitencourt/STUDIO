@@ -172,7 +172,7 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
 
     const fields = line.substring(1, line.length - 1).split('|');
     const regType = fields[0];
-    if (!regType || regType.startsWith('I') || regType.startsWith('P')) continue;
+    if (!regType) continue;
 
     const definition = RECORD_DEFINITIONS[regType];
     const headers = definition ? [...definition] : fields.map((_, i) => `CAMPO_${i}`);
