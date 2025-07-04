@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from 'react';
-import type { ParsedEfdData } from '@/lib/types';
-import { parseEfdFile } from '@/lib/efd-parser';
+import type { ParsedEfdData, EfdRecord } from '@/lib/types';
+import { parseEfdFile, recalculateSummaries, exportRecordsToEfdText } from '@/lib/efd-parser';
 import { useToast } from "@/hooks/use-toast";
 
 import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator, SidebarFooter } from '@/components/ui/sidebar';
@@ -11,10 +11,8 @@ import { FileUploader } from '@/components/file-uploader';
 import { OperationsSummary } from '@/components/operations-summary';
 import { TaxSummary } from '@/components/tax-summary';
 import { RecordDataView } from '@/components/record-data-view';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
-
 
 export default function Home() {
   const [data, setData] = useState<ParsedEfdData | null>(null);
@@ -25,7 +23,7 @@ export default function Home() {
 
   const handleFileRead = (content: string) => {
     try {
-      if(!content) {
+      if (!content) {
         toast({
           variant: "destructive",
           title: "Erro ao ler arquivo",
@@ -37,7 +35,7 @@ export default function Home() {
       setData(parsedData);
       setActiveView('entradas');
       setSelectedRecord(null);
-    } catch (error)      {
+    } catch (error) {
       console.error("Parsing error:", error);
       toast({
         variant: "destructive",
@@ -46,17 +44,65 @@ export default function Home() {
       });
     }
   };
-  
+
   const handleReset = () => {
     setData(null);
     setSelectedRecord(null);
     setIsProcessing(false);
     setActiveView('entradas');
-  }
+  };
 
   const handleSelectView = (view: typeof activeView) => {
     setActiveView(view);
     setSelectedRecord(null);
+  };
+  
+  const handleRecordsUpdate = (updatedRecordList: EfdRecord[], recordType: string) => {
+      if (!data) return;
+      
+      const updatedRecords = {
+          ...data.records,
+          [recordType]: updatedRecordList,
+      };
+
+      const newSummaries = recalculateSummaries(updatedRecords);
+
+      setData({
+          records: updatedRecords,
+          ...newSummaries,
+      });
+  };
+
+  const handleExport = () => {
+    if (!data) {
+        toast({
+            variant: "destructive",
+            title: "Sem dados para exportar",
+            description: "Carregue um arquivo primeiro.",
+        });
+        return;
+    }
+    try {
+        const fileContent = exportRecordsToEfdText(data.records);
+        const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'EFD_CONTRIBUICOES_ALTERADO.txt';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        toast({
+            title: "Exportação Concluída",
+            description: "Seu arquivo foi gerado com sucesso.",
+        });
+    } catch (error) {
+        console.error("Export error:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro na Exportação",
+            description: "Não foi possível gerar o arquivo.",
+        });
+    }
   };
 
   const recordTypes = data ? Object.keys(data.records) : [];
@@ -154,16 +200,24 @@ export default function Home() {
           <div className="space-y-8">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-              <Button onClick={handleReset} variant="ghost" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Carregar Outro Arquivo
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={handleExport} variant="outline" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
+                  <Download className="mr-2 h-4 w-4" />
+                  Exportar Arquivo
+                </Button>
+                <Button onClick={handleReset} variant="ghost" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Carregar Outro Arquivo
+                </Button>
+              </div>
             </div>
             
             {selectedRecord ? (
               <RecordDataView
+                key={selectedRecord}
                 recordType={selectedRecord}
                 records={data.records[selectedRecord] || []}
+                onUpdate={(updatedRecords) => handleRecordsUpdate(updatedRecords, selectedRecord)}
               />
             ) : (
               <>

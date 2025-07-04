@@ -1,4 +1,7 @@
-export type EfdRecord = { [key: string]: string };
+export type EfdRecord = {
+  _id?: string; // Unique ID for React keys and state management
+  [key: string]: string;
+};
 
 export type OperationSummaryItem = {
   direcao: string;
