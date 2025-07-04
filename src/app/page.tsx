@@ -5,7 +5,7 @@ import type { ParsedEfdData } from '@/lib/types';
 import { parseEfdFile } from '@/lib/efd-parser';
 import { useToast } from "@/hooks/use-toast";
 
-import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator } from '@/components/ui/sidebar';
 import { EfdInsightsLogo } from '@/components/efd-insights-logo';
 import { FileUploader } from '@/components/file-uploader';
 import { OperationsSummary } from '@/components/operations-summary';
@@ -36,10 +36,7 @@ export default function Home() {
       const parsedData = parseEfdFile(content);
       setData(parsedData);
       setActiveView('operations');
-      const firstRecordType = Object.keys(parsedData.records)[0];
-      if (firstRecordType) {
-        setSelectedRecord(firstRecordType);
-      }
+      setSelectedRecord(null);
     } catch (error) {
       console.error("Parsing error:", error);
       toast({
@@ -57,6 +54,11 @@ export default function Home() {
     setActiveView('operations');
   }
 
+  const handleSelectSummary = (summaryType: 'operations' | 'tax') => {
+    setActiveView(summaryType);
+    setSelectedRecord(null);
+  };
+
   const recordTypes = data ? Object.keys(data.records) : [];
 
   return (
@@ -68,20 +70,45 @@ export default function Home() {
           </SidebarHeader>
           <SidebarContent>
             {data && (
-              <SidebarMenu>
-                {recordTypes.map(recordType => (
-                  <SidebarMenuItem key={recordType}>
+              <>
+                <SidebarMenu>
+                  <SidebarMenuItem>
                     <SidebarMenuButton
-                      onClick={() => setSelectedRecord(recordType)}
-                      isActive={selectedRecord === recordType}
+                      onClick={() => handleSelectSummary('operations')}
+                      isActive={!selectedRecord && activeView === 'operations'}
                       className="w-full justify-start rounded-xl shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
-                      tooltip={`Registro ${recordType}`}
+                      tooltip="Resumo das Operações"
                     >
-                      <span className="truncate">{`Registro ${recordType}`}</span>
+                      <span>Resumo das Operações</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={() => handleSelectSummary('tax')}
+                      isActive={!selectedRecord && activeView === 'tax'}
+                      className="w-full justify-start rounded-xl shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
+                      tooltip="Resumo da Apuração"
+                    >
+                      <span>Resumo da Apuração</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+                <SidebarSeparator className="my-2" />
+                <SidebarMenu>
+                  {recordTypes.map(recordType => (
+                    <SidebarMenuItem key={recordType}>
+                      <SidebarMenuButton
+                        onClick={() => setSelectedRecord(recordType)}
+                        isActive={selectedRecord === recordType}
+                        className="w-full justify-start rounded-xl shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
+                        tooltip={`Registro ${recordType}`}
+                      >
+                        <span className="truncate">{`Registro ${recordType}`}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </>
             )}
           </SidebarContent>
         </Sidebar>
@@ -110,30 +137,17 @@ export default function Home() {
                   </Button>
                 </div>
                 
-                <div className="flex flex-wrap gap-4">
-                  <Button 
-                    onClick={() => setActiveView('operations')} 
-                    variant={activeView === 'operations' ? 'default' : 'outline'}
-                    className="shadow-neumo active:shadow-neumo-inset rounded-xl"
-                  >
-                    Resumo das Operações
-                  </Button>
-                  <Button 
-                    onClick={() => setActiveView('tax')} 
-                    variant={activeView === 'tax' ? 'default' : 'outline'}
-                    className="shadow-neumo active:shadow-neumo-inset rounded-xl"
-                  >
-                    Resumo da Apuração
-                  </Button>
-                </div>
-
-                {activeView === 'operations' && <OperationsSummary data={data.operationsSummary} />}
-                {activeView === 'tax' && <TaxSummary data={data.taxSummary} />}
-                
-                <RecordDataView
-                  recordType={selectedRecord || ''}
-                  records={selectedRecord ? data.records[selectedRecord] : []}
-                />
+                {selectedRecord ? (
+                  <RecordDataView
+                    recordType={selectedRecord}
+                    records={data.records[selectedRecord] || []}
+                  />
+                ) : (
+                  <>
+                    {activeView === 'operations' && <OperationsSummary data={data.operationsSummary} />}
+                    {activeView === 'tax' && <TaxSummary data={data.taxSummary} />}
+                  </>
+                )}
               </div>
             )}
           </main>
