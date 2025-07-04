@@ -3,8 +3,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { EfdRecord } from "@/lib/types";
 import { Info, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 interface RecordDataViewProps {
   recordType: string;
@@ -15,9 +18,13 @@ const RECORDS_PER_PAGE = 200;
 
 export function RecordDataView({ recordType, records }: RecordDataViewProps) {
     const [currentPage, setCurrentPage] = useState(1);
+    const [filterColumn, setFilterColumn] = useState<string>('');
+    const [filterValue, setFilterValue] = useState<string>('');
 
     useEffect(() => {
         setCurrentPage(1);
+        setFilterColumn('');
+        setFilterValue('');
     }, [recordType]);
 
   if (!recordType || !records || records.length === 0) {
@@ -34,8 +41,31 @@ export function RecordDataView({ recordType, records }: RecordDataViewProps) {
   
   const headers = Object.keys(records[0] || {});
 
-  const totalPages = Math.ceil(records.length / RECORDS_PER_PAGE);
-  const paginatedRecords = records.slice(
+  const filteredRecords = useMemo(() => {
+    if (!filterValue.trim()) {
+      return records;
+    }
+    const lowercasedFilter = filterValue.toLowerCase();
+
+    return records.filter(record => {
+      if (filterColumn) {
+        const cellValue = record[filterColumn] || '';
+        return String(cellValue).toLowerCase().includes(lowercasedFilter);
+      } else {
+        return Object.values(record).some(value =>
+          String(value).toLowerCase().includes(lowercasedFilter)
+        );
+      }
+    });
+  }, [records, filterColumn, filterValue]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterColumn, filterValue]);
+
+
+  const totalPages = Math.ceil(filteredRecords.length / RECORDS_PER_PAGE);
+  const paginatedRecords = filteredRecords.slice(
     (currentPage - 1) * RECORDS_PER_PAGE,
     currentPage * RECORDS_PER_PAGE
   );
@@ -52,10 +82,33 @@ export function RecordDataView({ recordType, records }: RecordDataViewProps) {
   return (
     <Card className="shadow-neumo border-none rounded-2xl h-[600px] flex flex-col">
       <CardHeader>
-        <CardTitle>Dados do Registro: {recordType}</CardTitle>
-        <CardDescription>
-            Exibindo {paginatedRecords.length} de {records.length} registro(s) do tipo {recordType}.
-        </CardDescription>
+        <div className="flex justify-between items-start">
+            <div>
+                <CardTitle>Dados do Registro: {recordType}</CardTitle>
+                <CardDescription>
+                    Exibindo {paginatedRecords.length} de {filteredRecords.length} registro(s) filtrado(s).
+                </CardDescription>
+            </div>
+            <div className="flex items-center space-x-2">
+                <Select value={filterColumn} onValueChange={(value) => setFilterColumn(value === 'all' ? '' : value)}>
+                    <SelectTrigger className="w-[200px] shadow-neumo-inset">
+                        <SelectValue placeholder="Filtrar por coluna" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Todas as Colunas</SelectItem>
+                        {headers.map(header => (
+                            <SelectItem key={header} value={header}>{header}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
+                <Input
+                    placeholder="Pesquisar valor..."
+                    value={filterValue}
+                    onChange={(e) => setFilterValue(e.target.value)}
+                    className="max-w-sm shadow-neumo-inset"
+                />
+            </div>
+        </div>
       </CardHeader>
       <CardContent className="flex-grow overflow-hidden">
         <ScrollArea className="h-full">
