@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { EfdRecord } from "@/lib/types";
 import { Info, ChevronLeft, ChevronRight, PlusCircle, Trash2 } from "lucide-react";
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,25 +19,37 @@ const RECORDS_PER_PAGE = 200;
 export function RecordDataView({ recordType, records, onUpdate }: RecordDataViewProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterColumn, setFilterColumn] = useState<string>('');
-  const [filterValue, setFilterValue] = useState<string>('');
+  
+  const [filterInputValue, setFilterInputValue] = useState('');
+  const [filterValue, setFilterValue] = useState('');
 
+  // Debounce filter input to avoid performance issues on large datasets
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilterValue(filterInputValue);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [filterInputValue]);
+
+  // Reset state when recordType changes
   useEffect(() => {
     setCurrentPage(1);
     setFilterColumn('');
+    setFilterInputValue('');
     setFilterValue('');
   }, [recordType]);
 
-  const handleFieldChange = (recordId: string, field: string, value: string) => {
-    const updatedRecords = records.map(r => {
-      if (r._id === recordId) {
-        return { ...r, [field]: value };
-      }
-      return r;
-    });
-    onUpdate(updatedRecords);
-  };
+  // Optimize field change handling for better performance
+  const handleFieldChange = useCallback((recordId: string, field: string, value: string) => {
+    const recordIndex = records.findIndex(r => r._id === recordId);
+    if (recordIndex === -1) return;
 
-  const handleAddRow = () => {
+    const updatedRecords = [...records];
+    updatedRecords[recordIndex] = { ...updatedRecords[recordIndex], [field]: value };
+    onUpdate(updatedRecords);
+  }, [records, onUpdate]);
+
+  const handleAddRow = useCallback(() => {
     const newRecord: EfdRecord = { REG: recordType, _id: `new_${Date.now()}` };
     if (records.length > 0) {
       Object.keys(records[0]).forEach(header => {
@@ -47,14 +59,14 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
       });
     }
     onUpdate([newRecord, ...records]);
-  };
+  }, [records, onUpdate, recordType]);
   
-  const handleDeleteRow = (recordId: string) => {
+  const handleDeleteRow = useCallback((recordId: string) => {
     const updatedRecords = records.filter(r => r._id !== recordId);
     onUpdate(updatedRecords);
-  };
+  }, [records, onUpdate]);
 
-  const headers = records.length > 0 ? Object.keys(records[0]).filter(h => h !== '_id') : [];
+  const headers = useMemo(() => (records.length > 0 ? Object.keys(records[0]).filter(h => h !== '_id') : []), [records]);
 
   const filteredRecords = useMemo(() => {
     if (!filterValue.trim()) {
@@ -79,10 +91,10 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
   }, [filterColumn, filterValue]);
 
   const totalPages = Math.ceil(filteredRecords.length / RECORDS_PER_PAGE);
-  const paginatedRecords = filteredRecords.slice(
+  const paginatedRecords = useMemo(() => filteredRecords.slice(
     (currentPage - 1) * RECORDS_PER_PAGE,
     currentPage * RECORDS_PER_PAGE
-  );
+  ), [filteredRecords, currentPage]);
 
   const handlePrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
   const handleNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
@@ -114,7 +126,7 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
                 </CardDescription>
             </div>
             <div className="flex items-center space-x-2">
-                <Select value={filterColumn} onValueChange={(value) => setFilterColumn(value)}>
+                <Select value={filterColumn} onValueChange={(value) => setFilterColumn(value || '')}>
                     <SelectTrigger className="w-[200px] shadow-neumo-inset">
                         <SelectValue placeholder="Filtrar por coluna" />
                     </SelectTrigger>
@@ -127,8 +139,8 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
                 </Select>
                 <Input
                     placeholder="Pesquisar valor..."
-                    value={filterValue}
-                    onChange={(e) => setFilterValue(e.target.value)}
+                    value={filterInputValue}
+                    onChange={(e) => setFilterInputValue(e.target.value)}
                     className="max-w-sm shadow-neumo-inset"
                 />
                  <Button onClick={handleAddRow} className="shadow-neumo active:shadow-neumo-inset rounded-xl">
