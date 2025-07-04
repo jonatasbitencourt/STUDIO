@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { EfdRecord } from "@/lib/types";
 import { Info, ChevronLeft, ChevronRight, PlusCircle, Trash2 } from "lucide-react";
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,6 +16,42 @@ interface RecordDataViewProps {
 
 const RECORDS_PER_PAGE = 200;
 
+// Memoize the Row component to prevent unnecessary re-renders
+const MemoizedRow = memo(function MemoizedRow({ record, headers, handleFieldChange, handleDeleteRow }: {
+  record: EfdRecord;
+  headers: string[];
+  handleFieldChange: (recordId: string, field: string, value: string) => void;
+  handleDeleteRow: (recordId: string) => void;
+}) {
+  return (
+    <TableRow>
+      <TableCell className="p-0 whitespace-nowrap">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-auto w-auto p-0.5 text-destructive hover:bg-destructive/10"
+          onClick={() => handleDeleteRow(record._id!)}
+        >
+          <Trash2 className="h-3 w-3" />
+          <span className="sr-only">Excluir</span>
+        </Button>
+      </TableCell>
+      {headers.map(header => (
+        <TableCell key={`${record._id}-${header}`} className="p-0 whitespace-nowrap">
+            <input
+              type="text"
+              value={record[header] || ''}
+              onChange={(e) => handleFieldChange(record._id!, header, e.target.value)}
+              size={Math.max(String(record[header] || '').length, header.length, 5)}
+              className="h-auto bg-transparent px-1 py-0.5 text-[8px] border-none rounded-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              disabled={header === 'REG'}
+            />
+        </TableCell>
+      ))}
+    </TableRow>
+  );
+});
+
 export function RecordDataView({ recordType, records, onUpdate }: RecordDataViewProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterColumn, setFilterColumn] = useState<string>('');
@@ -23,16 +59,13 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
   const [filterInputValue, setFilterInputValue] = useState('');
   const [filterValue, setFilterValue] = useState('');
 
-  // Performance Optimization: Internal state for records to make UI updates snappy
   const [internalRecords, setInternalRecords] = useState(records);
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Sync internal state when the records prop changes from parent
   useEffect(() => {
     setInternalRecords(records);
   }, [records]);
 
-  // Debounce filter input to avoid re-filtering on every keystroke
   useEffect(() => {
     const timer = setTimeout(() => {
       setFilterValue(filterInputValue);
@@ -40,7 +73,6 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
     return () => clearTimeout(timer);
   }, [filterInputValue]);
 
-  // Reset view state when recordType changes
   useEffect(() => {
     setCurrentPage(1);
     setFilterColumn('');
@@ -48,27 +80,52 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
     setFilterValue('');
   }, [recordType]);
 
-  // Performance Optimization: Debounce the expensive onUpdate call for summaries
+  // Use functional updates in useCallback to avoid dependency on `internalRecords`
+  // This stabilizes the function reference and prevents re-renders of all rows.
   const handleFieldChange = useCallback((recordId: string, field: string, value: string) => {
-    // Update local state immediately for a responsive UI
-    const newInternalRecords = internalRecords.map(r => {
-      if (r._id === recordId) {
-        return { ...r, [field]: value };
-      }
-      return r;
-    });
-    setInternalRecords(newInternalRecords);
-    
-    // Clear previous timeout and set a new one
-    if (updateTimeoutRef.current) {
-      clearTimeout(updateTimeoutRef.current);
-    }
-    updateTimeoutRef.current = setTimeout(() => {
-      onUpdate(newInternalRecords);
-    }, 500); // Wait 500ms after user stops typing to update summaries
-  }, [internalRecords, onUpdate]);
+    setInternalRecords(currentRecords => {
+      const recordIndex = currentRecords.findIndex(r => r._id === recordId);
+      if (recordIndex === -1) return currentRecords;
 
-  // Cleanup the timeout on unmount
+      const newRecords = [...currentRecords]; // Create a new array for immutability
+      newRecords[recordIndex] = { ...newRecords[recordIndex], [field]: value };
+      
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+      updateTimeoutRef.current = setTimeout(() => {
+        onUpdate(newRecords);
+      }, 500);
+
+      return newRecords;
+    });
+  }, [onUpdate]);
+
+  const handleDeleteRow = useCallback((recordId: string) => {
+    setInternalRecords(currentRecords => {
+      const updatedRecords = currentRecords.filter(r => r._id !== recordId);
+      onUpdate(updatedRecords);
+      return updatedRecords;
+    });
+  }, [onUpdate]);
+
+  const handleAddRow = useCallback(() => {
+    setInternalRecords(currentRecords => {
+        const newRecord: EfdRecord = { REG: recordType, _id: `new_${Date.now()}` };
+        const templateRecord = currentRecords.length > 0 ? currentRecords[0] : (records.length > 0 ? records[0] : null);
+        if (templateRecord) {
+            Object.keys(templateRecord).forEach(header => {
+                if (header !== 'REG' && header !== '_id') {
+                    newRecord[header] = '';
+                }
+            });
+        }
+        const updatedRecords = [newRecord, ...currentRecords];
+        onUpdate(updatedRecords);
+        return updatedRecords;
+    });
+  }, [onUpdate, recordType, records]);
+
   useEffect(() => {
     return () => {
       if (updateTimeoutRef.current) {
@@ -77,28 +134,7 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
     };
   }, []);
 
-
-  const handleAddRow = useCallback(() => {
-    const newRecord: EfdRecord = { REG: recordType, _id: `new_${Date.now()}` };
-    if (internalRecords.length > 0) {
-      Object.keys(internalRecords[0]).forEach(header => {
-        if (header !== 'REG' && header !== '_id') {
-          newRecord[header] = '';
-        }
-      });
-    }
-    const updatedRecords = [newRecord, ...internalRecords];
-    setInternalRecords(updatedRecords);
-    onUpdate(updatedRecords); // Update summaries immediately
-  }, [internalRecords, onUpdate, recordType]);
-  
-  const handleDeleteRow = useCallback((recordId: string) => {
-    const updatedRecords = internalRecords.filter(r => r._id !== recordId);
-    setInternalRecords(updatedRecords);
-    onUpdate(updatedRecords); // Update summaries immediately
-  }, [internalRecords, onUpdate]);
-
-  const headers = useMemo(() => (internalRecords.length > 0 ? Object.keys(internalRecords[0]).filter(h => h !== '_id') : []), [internalRecords]);
+  const headers = useMemo(() => (records.length > 0 ? Object.keys(records[0]).filter(h => h !== '_id') : []), [records]);
 
   const filteredRecords = useMemo(() => {
     if (!filterValue.trim()) {
@@ -109,10 +145,8 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
     return internalRecords.filter(record => {
       if (filterColumn && filterColumn !== 'all') {
         const cellValue = record[filterColumn] || '';
-        // Exact match for specific column filter
         return String(cellValue).toLowerCase().trim() === lowercasedFilter;
       } else {
-        // "contains" match for "All columns" filter
         return Object.values(record).some(value =>
           String(value).toLowerCase().includes(lowercasedFilter)
         );
@@ -133,17 +167,13 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
   const handlePrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
   const handleNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
 
-  if (!recordType || internalRecords.length === 0) {
+  if (!recordType || records.length === 0) {
     return (
       <Card className="shadow-neumo border-none rounded-2xl h-[400px] flex items-center justify-center">
         <div className="text-center text-muted-foreground space-y-2">
             <Info className="mx-auto h-10 w-10"/>
             <p className="font-semibold">Nenhum registro encontrado para {recordType}</p>
-            <p className="text-sm">Você pode adicionar um novo registro abaixo.</p>
-            <Button onClick={handleAddRow} className="mt-4 shadow-neumo active:shadow-neumo-inset rounded-xl">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Adicionar Linha
-            </Button>
+            <p className="text-sm">Carregue um arquivo para visualizar os dados.</p>
         </div>
       </Card>
     );
@@ -197,31 +227,13 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
               </TableHeader>
               <TableBody>
                 {paginatedRecords.map((record) => (
-                  <TableRow key={record._id}>
-                    <TableCell className="p-0 whitespace-nowrap">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-auto w-auto p-0.5 text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDeleteRow(record._id!)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                        <span className="sr-only">Excluir</span>
-                      </Button>
-                    </TableCell>
-                    {headers.map(header => (
-                      <TableCell key={`${record._id}-${header}`} className="p-0 whitespace-nowrap">
-                         <input
-                            type="text"
-                            value={record[header] || ''}
-                            onChange={(e) => handleFieldChange(record._id!, header, e.target.value)}
-                            size={Math.max(String(record[header] || '').length, header.length, 5) || 5}
-                            className="h-auto bg-transparent px-1 py-0.5 text-[8px] border-none rounded-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                            disabled={header === 'REG'}
-                         />
-                      </TableCell>
-                    ))}
-                  </TableRow>
+                  <MemoizedRow
+                    key={record._id}
+                    record={record}
+                    headers={headers}
+                    handleFieldChange={handleFieldChange}
+                    handleDeleteRow={handleDeleteRow}
+                  />
                 ))}
               </TableBody>
             </Table>
