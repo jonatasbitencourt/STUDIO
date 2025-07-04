@@ -116,15 +116,15 @@ export function RecordDataView({ recordType, records }: RecordDataViewProps) {
               <TableHeader className="sticky top-0 bg-background/80 backdrop-blur-sm z-10">
                 <TableRow>
                   {headers.map(header => (
-                    <TableHead key={header} className="font-bold text-xs px-2 py-1 whitespace-nowrap">{header}</TableHead>
+                    <TableHead key={header} className="font-bold text-[11px] px-1.5 py-0.5 whitespace-nowrap">{header}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedRecords.map((record, index) => (
-                  <TableRow key={index} className="h-8">
+                  <TableRow key={index}>
                     {headers.map(header => (
-                      <TableCell key={`${header}-${index}`} className="text-[11px] px-2 py-1 whitespace-nowrap">{record[header]}</TableCell>
+                      <TableCell key={`${header}-${index}`} className="text-[10px] px-1.5 py-0.5 whitespace-nowrap">{record[header]}</TableCell>
                     ))}
                   </TableRow>
                 ))}
