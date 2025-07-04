@@ -3,7 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { EfdRecord } from "@/lib/types";
 import { Info, ChevronLeft, ChevronRight, PlusCircle, Trash2 } from "lucide-react";
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -23,7 +23,16 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
   const [filterInputValue, setFilterInputValue] = useState('');
   const [filterValue, setFilterValue] = useState('');
 
-  // Debounce filter input to avoid performance issues on large datasets
+  // Performance Optimization: Internal state for records to make UI updates snappy
+  const [internalRecords, setInternalRecords] = useState(records);
+  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Sync internal state when the records prop changes from parent
+  useEffect(() => {
+    setInternalRecords(records);
+  }, [records]);
+
+  // Debounce filter input to avoid re-filtering on every keystroke
   useEffect(() => {
     const timer = setTimeout(() => {
       setFilterValue(filterInputValue);
@@ -31,7 +40,7 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
     return () => clearTimeout(timer);
   }, [filterInputValue]);
 
-  // Reset state when recordType changes
+  // Reset view state when recordType changes
   useEffect(() => {
     setCurrentPage(1);
     setFilterColumn('');
@@ -39,52 +48,77 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
     setFilterValue('');
   }, [recordType]);
 
-  // Optimize field change handling for better performance
+  // Performance Optimization: Debounce the expensive onUpdate call for summaries
   const handleFieldChange = useCallback((recordId: string, field: string, value: string) => {
-    const recordIndex = records.findIndex(r => r._id === recordId);
-    if (recordIndex === -1) return;
+    // Update local state immediately for a responsive UI
+    const newInternalRecords = internalRecords.map(r => {
+      if (r._id === recordId) {
+        return { ...r, [field]: value };
+      }
+      return r;
+    });
+    setInternalRecords(newInternalRecords);
+    
+    // Clear previous timeout and set a new one
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
+    updateTimeoutRef.current = setTimeout(() => {
+      onUpdate(newInternalRecords);
+    }, 500); // Wait 500ms after user stops typing to update summaries
+  }, [internalRecords, onUpdate]);
 
-    const updatedRecords = [...records];
-    updatedRecords[recordIndex] = { ...updatedRecords[recordIndex], [field]: value };
-    onUpdate(updatedRecords);
-  }, [records, onUpdate]);
+  // Cleanup the timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (updateTimeoutRef.current) {
+        clearTimeout(updateTimeoutRef.current);
+      }
+    };
+  }, []);
+
 
   const handleAddRow = useCallback(() => {
     const newRecord: EfdRecord = { REG: recordType, _id: `new_${Date.now()}` };
-    if (records.length > 0) {
-      Object.keys(records[0]).forEach(header => {
+    if (internalRecords.length > 0) {
+      Object.keys(internalRecords[0]).forEach(header => {
         if (header !== 'REG' && header !== '_id') {
           newRecord[header] = '';
         }
       });
     }
-    onUpdate([newRecord, ...records]);
-  }, [records, onUpdate, recordType]);
+    const updatedRecords = [newRecord, ...internalRecords];
+    setInternalRecords(updatedRecords);
+    onUpdate(updatedRecords); // Update summaries immediately
+  }, [internalRecords, onUpdate, recordType]);
   
   const handleDeleteRow = useCallback((recordId: string) => {
-    const updatedRecords = records.filter(r => r._id !== recordId);
-    onUpdate(updatedRecords);
-  }, [records, onUpdate]);
+    const updatedRecords = internalRecords.filter(r => r._id !== recordId);
+    setInternalRecords(updatedRecords);
+    onUpdate(updatedRecords); // Update summaries immediately
+  }, [internalRecords, onUpdate]);
 
-  const headers = useMemo(() => (records.length > 0 ? Object.keys(records[0]).filter(h => h !== '_id') : []), [records]);
+  const headers = useMemo(() => (internalRecords.length > 0 ? Object.keys(internalRecords[0]).filter(h => h !== '_id') : []), [internalRecords]);
 
   const filteredRecords = useMemo(() => {
     if (!filterValue.trim()) {
-      return records;
+      return internalRecords;
     }
-    const lowercasedFilter = filterValue.toLowerCase();
+    const lowercasedFilter = filterValue.toLowerCase().trim();
 
-    return records.filter(record => {
+    return internalRecords.filter(record => {
       if (filterColumn && filterColumn !== 'all') {
         const cellValue = record[filterColumn] || '';
-        return String(cellValue).toLowerCase().includes(lowercasedFilter);
+        // Exact match for specific column filter
+        return String(cellValue).toLowerCase().trim() === lowercasedFilter;
       } else {
+        // "contains" match for "All columns" filter
         return Object.values(record).some(value =>
           String(value).toLowerCase().includes(lowercasedFilter)
         );
       }
     });
-  }, [records, filterColumn, filterValue]);
+  }, [internalRecords, filterColumn, filterValue]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -99,7 +133,7 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
   const handlePrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
   const handleNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
 
-  if (!recordType || records.length === 0) {
+  if (!recordType || internalRecords.length === 0) {
     return (
       <Card className="shadow-neumo border-none rounded-2xl h-[400px] flex items-center justify-center">
         <div className="text-center text-muted-foreground space-y-2">
