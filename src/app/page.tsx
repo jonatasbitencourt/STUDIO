@@ -20,6 +20,7 @@ export default function Home() {
   const [data, setData] = useState<ParsedEfdData | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [activeView, setActiveView] = useState<'operations' | 'tax'>('operations');
   const { toast } = useToast();
 
   const handleFileRead = (content: string) => {
@@ -34,6 +35,7 @@ export default function Home() {
       }
       const parsedData = parseEfdFile(content);
       setData(parsedData);
+      setActiveView('operations');
       const firstRecordType = Object.keys(parsedData.records)[0];
       if (firstRecordType) {
         setSelectedRecord(firstRecordType);
@@ -52,6 +54,7 @@ export default function Home() {
     setData(null);
     setSelectedRecord(null);
     setIsProcessing(false);
+    setActiveView('operations');
   }
 
   const recordTypes = data ? Object.keys(data.records) : [];
@@ -106,10 +109,29 @@ export default function Home() {
                     Carregar Outro Arquivo
                   </Button>
                 </div>
-                <div className="grid gap-8 md:grid-cols-2">
-                  <OperationsSummary data={data.operationsSummary} />
-                  <TaxSummary data={data.taxSummary} />
+                
+                <div className="flex gap-4">
+                  <Button 
+                    onClick={() => setActiveView('operations')} 
+                    variant={activeView === 'operations' ? 'default' : 'outline'}
+                    className="shadow-neumo active:shadow-neumo-inset rounded-xl"
+                  >
+                    Resumo das Operações
+                  </Button>
+                  <Button 
+                    onClick={() => setActiveView('tax')} 
+                    variant={activeView === 'tax' ? 'default' : 'outline'}
+                    className="shadow-neumo active:shadow-neumo-inset rounded-xl"
+                  >
+                    Resumo da Apuração
+                  </Button>
                 </div>
+
+                <div className="grid gap-8">
+                  {activeView === 'operations' && <OperationsSummary data={data.operationsSummary} />}
+                  {activeView === 'tax' && <TaxSummary data={data.taxSummary} />}
+                </div>
+                
                 <div>
                   <RecordDataView
                     recordType={selectedRecord || ''}
