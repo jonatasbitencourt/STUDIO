@@ -1,9 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import type { ParsedEfdData } from "@/lib/types";
+import type { OperationSummaryItem } from "@/lib/types";
 
 interface OperationsSummaryProps {
-  data: ParsedEfdData['operationsSummary'];
+  data: OperationSummaryItem[];
 }
 
 export function OperationsSummary({ data }: OperationsSummaryProps) {
@@ -14,7 +14,7 @@ export function OperationsSummary({ data }: OperationsSummaryProps) {
     <Card className="shadow-neumo border-none rounded-2xl">
       <CardHeader>
         <CardTitle>Resumo das Operações</CardTitle>
-        <CardDescription>Análise detalhada por operação</CardDescription>
+        <CardDescription>Análise detalhada por CFOP, CST e Alíquotas</CardDescription>
       </CardHeader>
       <CardContent>
         <Table>

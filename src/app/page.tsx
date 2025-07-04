@@ -20,7 +20,7 @@ export default function Home() {
   const [data, setData] = useState<ParsedEfdData | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeView, setActiveView] = useState<'operations' | 'tax'>('operations');
+  const [activeView, setActiveView] = useState<'entradas' | 'saidas' | 'apuracao_pis' | 'apuracao_cofins' | null>('entradas');
   const { toast } = useToast();
 
   const handleFileRead = (content: string) => {
@@ -35,7 +35,7 @@ export default function Home() {
       }
       const parsedData = parseEfdFile(content);
       setData(parsedData);
-      setActiveView('operations');
+      setActiveView('entradas');
       setSelectedRecord(null);
     } catch (error)      {
       console.error("Parsing error:", error);
@@ -51,11 +51,11 @@ export default function Home() {
     setData(null);
     setSelectedRecord(null);
     setIsProcessing(false);
-    setActiveView('operations');
+    setActiveView('entradas');
   }
 
-  const handleSelectSummary = (summaryType: 'operations' | 'tax') => {
-    setActiveView(summaryType);
+  const handleSelectView = (view: typeof activeView) => {
+    setActiveView(view);
     setSelectedRecord(null);
   };
 
@@ -73,22 +73,42 @@ export default function Home() {
               <SidebarMenu>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    onClick={() => handleSelectSummary('operations')}
-                    isActive={!selectedRecord && activeView === 'operations'}
+                    onClick={() => handleSelectView('entradas')}
+                    isActive={activeView === 'entradas' && !selectedRecord}
                     className="w-full justify-start rounded-xl shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
-                    tooltip="Resumo das Operações"
+                    tooltip="Resumo das Entradas"
                   >
-                    <span>Resumo das Operações</span>
+                    <span>Entradas</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
-                    onClick={() => handleSelectSummary('tax')}
-                    isActive={!selectedRecord && activeView === 'tax'}
+                    onClick={() => handleSelectView('saidas')}
+                    isActive={activeView === 'saidas' && !selectedRecord}
                     className="w-full justify-start rounded-xl shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
-                    tooltip="Resumo da Apuração"
+                    tooltip="Resumo das Saídas"
                   >
-                    <span>Resumo da Apuração</span>
+                    <span>Saídas</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => handleSelectView('apuracao_pis')}
+                    isActive={activeView === 'apuracao_pis' && !selectedRecord}
+                    className="w-full justify-start rounded-xl shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
+                    tooltip="Apuração PIS"
+                  >
+                    <span>Apuração PIS</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => handleSelectView('apuracao_cofins')}
+                    isActive={activeView === 'apuracao_cofins' && !selectedRecord}
+                    className="w-full justify-start rounded-xl shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
+                    tooltip="Apuração COFINS"
+                  >
+                    <span>Apuração COFINS</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -142,8 +162,10 @@ export default function Home() {
               />
             ) : (
               <>
-                {activeView === 'operations' && <OperationsSummary data={data.operationsSummary} />}
-                {activeView === 'tax' && <TaxSummary data={data.taxSummary} />}
+                {activeView === 'entradas' && <OperationsSummary data={data.operationsSummaryEntradas} />}
+                {activeView === 'saidas' && <OperationsSummary data={data.operationsSummarySaidas} />}
+                {activeView === 'apuracao_pis' && <TaxSummary data={data.taxSummaryPis} title="Apuração PIS" description="Detalhamento da apuração de PIS (Registros do Bloco M)" />}
+                {activeView === 'apuracao_cofins' && <TaxSummary data={data.taxSummaryCofins} title="Apuração COFINS" description="Detalhamento da apuração de COFINS (Registros do Bloco M)" />}
               </>
             )}
           </div>

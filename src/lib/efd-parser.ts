@@ -1,4 +1,4 @@
-import type { ParsedEfdData, EfdRecord } from './types';
+import type { ParsedEfdData, EfdRecord, TaxSummaryItem, OperationSummaryItem } from './types';
 
 // Helper to parse Brazilian-style numbers (e.g., "1.234,56" -> 1234.56)
 const parseNumber = (str: string | undefined): number => {
@@ -13,19 +13,36 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   '0001': ['REG', 'IND_MOV'],
   '0110': ['REG', 'COD_INC_TRIB', 'IND_APROD', 'COD_TIPO_CONT', 'IND_REG_CUM'],
   '0500': ['REG', 'DT_ALT', 'COD_NAT_CC', 'IND_CTA', 'NIVEL', 'COD_CTA', 'NOME_CTA'],
+  // Block A
+  'A100': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_SIT', 'SER', 'SUB', 'NUM_DOC', 'CHV_NFSE', 'DT_DOC', 'DT_EXE_SERV', 'VL_DOC', 'IND_PGTO', 'VL_DESC', 'VL_BC_PIS', 'VL_PIS', 'VL_BC_COFINS', 'VL_COFINS', 'VL_PIS_RET', 'VL_COFINS_RET', 'VL_ISS'],
+  'A170': ['REG', 'NUM_ITEM', 'COD_ITEM', 'DESCR_COMPL', 'VL_ITEM', 'VL_DESC', 'NAT_BC_CRED', 'IND_ORIG_CRED', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA', 'COD_CCUS'],
+  // Block C
   'C100': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'NUM_DOC', 'CHV_NFE', 'DT_DOC', 'DT_E_S', 'VL_DOC', 'IND_PGTO', 'VL_DESC', 'VL_ABAT_NT', 'VL_MERC', 'IND_FRT', 'VL_FRT', 'VL_SEG', 'VL_OUT_DA', 'VL_BC_ICMS', 'VL_ICMS', 'VL_BC_ICMS_ST', 'VL_ICMS_ST', 'VL_IPI', 'VL_PIS', 'VL_COFINS', 'VL_PIS_ST', 'VL_COFINS_ST'],
   'C170': ['REG', 'NUM_ITEM', 'COD_ITEM', 'DESCR_COMPL', 'QTD', 'UNID', 'VL_ITEM', 'VL_DESC', 'IND_MOV', 'CST_ICMS', 'CFOP', 'COD_NAT', 'VL_BC_ICMS', 'ALIQ_ICMS', 'VL_ICMS', 'VL_BC_ICMS_ST', 'ALIQ_ST', 'VL_ICMS_ST', 'IND_APUR', 'CST_IPI', 'COD_ENQ', 'VL_BC_IPI', 'ALIQ_IPI', 'VL_IPI', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'QUANT_BC_PIS', 'ALIQ_PIS_QUANT', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'QUANT_BC_COFINS', 'ALIQ_COFINS_QUANT', 'VL_COFINS', 'COD_CTA'],
+  // Block D
+  'D100': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'SUB', 'NUM_DOC', 'CHV_CTE', 'DT_DOC', 'DT_A_P', 'TP_CT-E', 'CHV_CTE_REF', 'VL_DOC', 'VL_DESC', 'IND_FRT', 'VL_SERV', 'VL_BC_ICMS', 'VL_ICMS', 'VL_NT', 'COD_INF', 'COD_CTA'],
+  'D101': ['REG', 'IND_NAT_FRT', 'VL_ITEM', 'CST_PIS', 'NAT_BC_CRED', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA'],
+  'D500': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'SUB', 'NUM_DOC', 'DT_DOC', 'DT_A_P', 'VL_DOC', 'VL_DESC', 'VL_SERV', 'VL_SERV_NT', 'VL_TERC', 'VL_DA', 'VL_BC_ICMS', 'VL_ICMS', 'COD_INF', 'VL_PIS', 'VL_COFINS'],
+  'D501': ['REG', 'CST_PIS', 'VL_ITEM', 'NAT_BC_CRED', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'COD_CTA', 'COD_CCUS'],
+  // Block F
+  'F100': ['REG', 'IND_OPER', 'COD_PART', 'COD_ITEM', 'DT_OPER', 'VL_OPER', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'NAT_BC_CRED', 'IND_ORIG_CRED', 'COD_CTA', 'COD_CCUS', 'DESC_DOC_OPER'],
+  'F200': ['REG', 'IND_OPER', 'UNID_IMOB', 'IDENT_EMP', 'DESC_UNID', 'NUM_CONT', 'CPF_CNPJ_ADQU', 'DT_OPER', 'VL_TOT_VEND', 'VL_REC_ACUM', 'VL_TOT_REC_PER', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'PERC_REC_RECEB', 'IND_NAT_EMP', 'INF_COMP'],
+  // Block M
+  'M100': ['REG', 'COD_CRED', 'IND_CRED_ORI', 'VL_BC_PIS', 'ALIQ_PIS', 'QUANT_BC_PIS', 'ALIQ_PIS_QUANT', 'VL_PIS', 'VL_CRED_DESC_PIS', 'VL_CRED_DESC_ANT_PIS'],
+  'M105': ['REG', 'NAT_BC_CRED', 'CST_PIS', 'VL_BC_PIS_TOT', 'VL_BC_PIS_CUM', 'VL_BC_PIS_NC', 'VL_BC_PIS', 'QUANT_BC_PIS_TOT', 'QUANT_BC_PIS', 'DESC_CRED'],
   'M200': ['REG', 'VL_TOT_CONT_NC_PER', 'VL_TOT_CRED_DESC_PER', 'VL_TOT_CRED_DESC_EXT_PER', 'VL_TOT_CONT_NC_DEV', 'VL_TOT_CRED_EST', 'VL_TOT_CONT_NC_RET', 'VL_TOT_CONT_CUM_PER', 'VL_TOT_CRED_CUM_PER', 'VL_TOT_CRED_CUM_EXT_PER', 'VL_TOT_CONT_CUM_DEV', 'VL_TOT_CRED_CUM_EST', 'VL_TOT_CONT_CUM_RET', 'VL_TOT_CONT_REC', 'VL_TOT_CONT_REC_ANT', 'VL_TOT_PER_FISCAL', 'VL_TOT_AJ_RED', 'VL_TOT_AJ_ACRES', 'VL_TOT_CONT_PAG_DCOMP', 'VL_TOT_CONT_PAG_PER', 'VL_TOT_CONT_PAG_OUT', 'VL_TOT_CONT_PAG', 'VL_TOT_CONT_DEV_PIS', 'VL_TOT_CONT_DEV_COFINS'],
   'M210': ['REG', 'COD_CONT', 'VL_REC_BRU_NC_PER', 'VL_BC_CONT', 'VL_AJUS_ACRES_BC', 'VL_AJUS_REDUC_BC', 'VL_CONT_APUR', 'VL_CRED_DESC', 'VL_CRED_DESC_ANT', 'VL_TOT_CONT_DEVIDO', 'VL_RET_NC_PER', 'VL_OUT_DED_NC', 'VL_CONT_NC_RECOLHER', 'VL_REC_BRU_CUM_PER', 'VL_BC_CONT_CUM', 'VL_AJUS_ACRES_BC_CUM', 'VL_AJUS_REDUC_BC_CUM', 'VL_CONT_APUR_CUM', 'VL_CRED_DESC_CUM', 'VL_CRED_DESC_ANT_CUM', 'VL_TOT_CONT_DEVIDO_CUM', 'VL_RET_CUM_PER', 'VL_OUT_DED_CUM', 'VL_CONT_CUM_RECOLHER', 'VL_TOT_CONT_RECOLHER'],
+  'M500': ['REG', 'COD_CRED', 'IND_CRED_ORI', 'VL_BC_COFINS', 'ALIQ_COFINS', 'QUANT_BC_COFINS', 'ALIQ_COFINS_QUANT', 'VL_COFINS', 'VL_CRED_DESC_COFINS', 'VL_CRED_DESC_ANT_COFINS'],
+  'M505': ['REG', 'NAT_BC_CRED', 'CST_COFINS', 'VL_BC_COFINS_TOT', 'VL_BC_COFINS_CUM', 'VL_BC_COFINS_NC', 'VL_BC_COFINS', 'QUANT_BC_COFINS_TOT', 'QUANT_BC_COFINS', 'DESC_CRED'],
   'M600': ['REG', 'VL_TOT_CONT_NC_PER', 'VL_TOT_CRED_DESC_PER', 'VL_TOT_CRED_DESC_EXT_PER', 'VL_TOT_CONT_NC_DEV', 'VL_TOT_CRED_EST', 'VL_TOT_CONT_NC_RET', 'VL_TOT_CONT_CUM_PER', 'VL_TOT_CRED_CUM_PER', 'VL_TOT_CRED_CUM_EXT_PER', 'VL_TOT_CONT_CUM_DEV', 'VL_TOT_CRED_CUM_EST', 'VL_TOT_CONT_CUM_RET', 'VL_TOT_CONT_REC', 'VL_TOT_CONT_REC_ANT', 'VL_TOT_PER_FISCAL', 'VL_TOT_AJ_RED', 'VL_TOT_AJ_ACRES', 'VL_TOT_CONT_PAG_DCOMP', 'VL_TOT_CONT_PAG_PER', 'VL_TOT_CONT_PAG_OUT', 'VL_TOT_CONT_PAG', 'VL_TOT_CONT_DEV_PIS', 'VL_TOT_CONT_DEV_COFINS'],
   'M610': ['REG', 'COD_CONT', 'VL_REC_BRU_NC_PER', 'VL_BC_CONT', 'VL_AJUS_ACRES_BC', 'VL_AJUS_REDUC_BC', 'VL_CONT_APUR', 'VL_CRED_DESC', 'VL_CRED_DESC_ANT', 'VL_TOT_CONT_DEVIDO', 'VL_RET_NC_PER', 'VL_OUT_DED_NC', 'VL_CONT_NC_RECOLHER', 'VL_REC_BRU_CUM_PER', 'VL_BC_CONT_CUM', 'VL_AJUS_ACRES_BC_CUM', 'VL_AJUS_REDUC_BC_CUM', 'VL_CONT_APUR_CUM', 'VL_CRED_DESC_CUM', 'VL_CRED_DESC_ANT_CUM', 'VL_TOT_CONT_DEVIDO_CUM', 'VL_RET_CUM_PER', 'VL_OUT_DED_CUM', 'VL_CONT_CUM_RECOLHER', 'VL_TOT_CONT_RECOLHER'],
-  'F100': ['REG', 'IND_OPER', 'COD_PART', 'COD_ITEM', 'DT_OPER', 'VL_OPER', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'NAT_BC_CRED', 'IND_ORIG_CRED', 'COD_CTA', 'COD_CCUS', 'DESC_DOC_OPER'],
+  // Block 9
   '9900': ['REG', 'REG_BLC', 'QTD_REG_BLC'],
   '9999': ['REG', 'QTD_LIN'],
 };
 
-function transformConsolidationRecordToTaxSummary(reg: 'PIS' | 'COFINS', record: EfdRecord): ParsedEfdData['taxSummary'] {
-  const summary: ParsedEfdData['taxSummary'] = [];
+function transformConsolidationRecordToTaxSummary(record: EfdRecord): TaxSummaryItem[] {
+  const summary: TaxSummaryItem[] = [];
   const headers = RECORD_DEFINITIONS[record.REG] || Object.keys(record);
 
   // Skip the first field which is 'REG'
@@ -34,7 +51,6 @@ function transformConsolidationRecordToTaxSummary(reg: 'PIS' | 'COFINS', record:
     const valueStr = record[attribute];
     if (valueStr !== undefined) {
       summary.push({
-        reg,
         atributo: attribute,
         valor: parseNumber(valueStr),
       });
@@ -42,7 +58,6 @@ function transformConsolidationRecordToTaxSummary(reg: 'PIS' | 'COFINS', record:
   }
   return summary;
 }
-
 
 export const parseEfdFile = (fileContent: string): ParsedEfdData => {
   if (!fileContent.trim()) {
@@ -53,8 +68,10 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
 
   const parsedData: ParsedEfdData = {
     records: {},
-    operationsSummary: [],
-    taxSummary: [],
+    operationsSummaryEntradas: [],
+    operationsSummarySaidas: [],
+    taxSummaryPis: [],
+    taxSummaryCofins: [],
   };
 
   const operationsSummaryMap = new Map<string, any>();
@@ -90,7 +107,7 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
       const aliqCof = parseNumber(c170.ALIQ_COFINS);
       const indOper = currentC100.IND_OPER;
 
-      const key = `${cfop}|${cstPis}|${cstCofins}|${aliqPis}|${aliqCof}|${indOper}`;
+      const key = `${indOper}|${cfop}|${cstPis}|${cstCofins}|${aliqPis}|${aliqCof}`;
 
       if (!operationsSummaryMap.has(key)) {
         operationsSummaryMap.set(key, {
@@ -118,16 +135,24 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
       summary.vlr_pis += parseNumber(c170.VL_PIS);
       summary.vlr_cofins += parseNumber(c170.VL_COFINS);
     } else if (regType === 'M200') {
-        const pisSummary = transformConsolidationRecordToTaxSummary('PIS', efdRecord);
-        parsedData.taxSummary.push(...pisSummary);
+        const pisSummary = transformConsolidationRecordToTaxSummary(efdRecord);
+        parsedData.taxSummaryPis.push(...pisSummary);
     } else if (regType === 'M600') {
-        const cofinsSummary = transformConsolidationRecordToTaxSummary('COFINS', efdRecord);
-        parsedData.taxSummary.push(...cofinsSummary);
+        const cofinsSummary = transformConsolidationRecordToTaxSummary(efdRecord);
+        parsedData.taxSummaryCofins.push(...cofinsSummary);
     }
   }
+  
+  Array.from(operationsSummaryMap.values()).forEach(summary => {
+    if (summary.direcao === 'Entrada') {
+      parsedData.operationsSummaryEntradas.push(summary);
+    } else {
+      parsedData.operationsSummarySaidas.push(summary);
+    }
+  });
 
-  parsedData.operationsSummary = Array.from(operationsSummaryMap.values());
-  parsedData.operationsSummary.sort((a, b) => a.cfop.localeCompare(b.cfop));
+  parsedData.operationsSummaryEntradas.sort((a, b) => a.cfop.localeCompare(b.cfop));
+  parsedData.operationsSummarySaidas.sort((a, b) => a.cfop.localeCompare(b.cfop));
   
   // Sort records for consistent display
   const sortedRecords: { [recordType: string]: EfdRecord[] } = {};
