@@ -135,11 +135,11 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
       </CardHeader>
       <CardContent className="flex-grow overflow-hidden">
         <ScrollArea className="h-full">
-            <Table>
+            <Table className="w-auto">
               <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-10">
                 <TableRow>
                   {headers.map(header => (
-                    <TableHead key={header} className="font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">{header}</TableHead>
+                    <TableHead key={header} className="h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">{header}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
@@ -152,7 +152,7 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
                             type="text"
                             value={record[header] || ''}
                             onChange={(e) => handleFieldChange(record._id!, header, e.target.value)}
-                            className="h-5 text-[8px] border-none rounded-none focus-visible:ring-1 focus-visible:ring-ring bg-transparent"
+                            className="h-5 w-full text-[8px] border-none rounded-none focus-visible:ring-1 focus-visible:ring-ring bg-transparent px-1"
                             disabled={header === 'REG'}
                          />
                       </TableCell>
