@@ -71,6 +71,10 @@ export default {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
       },
+      boxShadow: {
+        'neumo': '6px 6px 12px #d5d5d5, -6px -6px 12px #ffffff',
+        'neumo-inset': 'inset 6px 6px 12px #d5d5d5, inset -6px -6px 12px #ffffff',
+      },
       keyframes: {
         'accordion-down': {
           from: {
