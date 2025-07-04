@@ -139,7 +139,7 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
               <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-10">
                 <TableRow>
                   {headers.map(header => (
-                    <TableHead key={header} className="font-bold text-[10px] px-1 py-0.5 whitespace-nowrap">{header}</TableHead>
+                    <TableHead key={header} className="font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">{header}</TableHead>
                   ))}
                 </TableRow>
               </TableHeader>
@@ -147,12 +147,12 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
                 {paginatedRecords.map((record) => (
                   <TableRow key={record._id}>
                     {headers.map(header => (
-                      <TableCell key={`${record._id}-${header}`} className="text-[10px] p-0 whitespace-nowrap">
+                      <TableCell key={`${record._id}-${header}`} className="p-0 whitespace-nowrap">
                          <Input
                             type="text"
                             value={record[header] || ''}
                             onChange={(e) => handleFieldChange(record._id!, header, e.target.value)}
-                            className="h-6 text-[10px] border-none rounded-none focus-visible:ring-1 focus-visible:ring-ring bg-transparent"
+                            className="h-5 text-[8px] border-none rounded-none focus-visible:ring-1 focus-visible:ring-ring bg-transparent"
                             disabled={header === 'REG'}
                          />
                       </TableCell>
