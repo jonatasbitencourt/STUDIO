@@ -152,7 +152,8 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
                             type="text"
                             value={record[header] || ''}
                             onChange={(e) => handleFieldChange(record._id!, header, e.target.value)}
-                            className="h-auto w-full bg-transparent px-1 py-0.5 text-[8px] border-none rounded-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                            size={Math.max(String(record[header] || '').length, 10)}
+                            className="h-auto bg-transparent px-1 py-0.5 text-[8px] border-none rounded-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                             disabled={header === 'REG'}
                          />
                       </TableCell>
