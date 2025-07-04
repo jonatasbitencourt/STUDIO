@@ -29,9 +29,9 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
   };
 
   const operationsSummary = [
-    { direction: 'Entrada', cfop: '1.101', cst: '50', total: 15000.75 },
-    { direction: 'Saída', cfop: '5.102', cst: '01', total: 35000.25 },
-    { direction: 'Entrada', cfop: '2.101', cst: '50', total: 8000.00 },
+    { direcao: 'Entrada', cfop: '1.101', cst_pis_cof: '50', aliq_pis: 1.65, aliq_cof: 7.60, vlr_tot: 15000.75, vlr_icms: 1800.09, vlr_st: 0, vlr_ipi: 0, vlr_bc_pis_cof: 15000.75, vlr_pis: 247.51, vlr_cofins: 1140.06 },
+    { direcao: 'Saída', cfop: '5.102', cst_pis_cof: '01', aliq_pis: 1.65, aliq_cof: 7.60, vlr_tot: 35000.25, vlr_icms: 4200.03, vlr_st: 0, vlr_ipi: 3500.00, vlr_bc_pis_cof: 35000.25, vlr_pis: 577.50, vlr_cofins: 2660.02 },
+    { direcao: 'Entrada', cfop: '2.101', cst_pis_cof: '50', aliq_pis: 1.65, aliq_cof: 7.60, vlr_tot: 8000.00, vlr_icms: 960.00, vlr_st: 0, vlr_ipi: 0, vlr_bc_pis_cof: 8000.00, vlr_pis: 132.00, vlr_cofins: 608.00 },
   ];
 
   const taxSummary = [

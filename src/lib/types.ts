@@ -5,10 +5,18 @@ export interface ParsedEfdData {
     [recordType: string]: EfdRecord[];
   };
   operationsSummary: {
-    direction: string;
+    direcao: string;
     cfop: string;
-    cst: string;
-    total: number;
+    cst_pis_cof: string;
+    aliq_pis: number;
+    aliq_cof: number;
+    vlr_tot: number;
+    vlr_icms: number;
+    vlr_st: number;
+    vlr_ipi: number;
+    vlr_bc_pis_cof: number;
+    vlr_pis: number;
+    vlr_cofins: number;
   }[];
   taxSummary: {
     tax: string;
