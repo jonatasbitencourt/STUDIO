@@ -37,7 +37,7 @@ export default function Home() {
       setData(parsedData);
       setActiveView('operations');
       setSelectedRecord(null);
-    } catch (error) {
+    } catch (error)      {
       console.error("Parsing error:", error);
       toast({
         variant: "destructive",
@@ -63,96 +63,92 @@ export default function Home() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen bg-background text-foreground">
-        <Sidebar collapsible="icon">
-          <SidebarHeader className="p-4">
-            <EfdInsightsLogo />
-          </SidebarHeader>
-          <SidebarContent>
-            {data && (
+      <Sidebar collapsible="icon">
+        <SidebarHeader className="p-4">
+          <EfdInsightsLogo />
+        </SidebarHeader>
+        <SidebarContent>
+          {data && (
+            <>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => handleSelectSummary('operations')}
+                    isActive={!selectedRecord && activeView === 'operations'}
+                    className="w-full justify-start rounded-xl shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
+                    tooltip="Resumo das Operações"
+                  >
+                    <span>Resumo das Operações</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => handleSelectSummary('tax')}
+                    isActive={!selectedRecord && activeView === 'tax'}
+                    className="w-full justify-start rounded-xl shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
+                    tooltip="Resumo da Apuração"
+                  >
+                    <span>Resumo da Apuração</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+              <SidebarSeparator className="my-2" />
+              <SidebarMenu>
+                {recordTypes.map(recordType => (
+                  <SidebarMenuItem key={recordType}>
+                    <SidebarMenuButton
+                      onClick={() => setSelectedRecord(recordType)}
+                      isActive={selectedRecord === recordType}
+                      className="w-full justify-start rounded-xl shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
+                      tooltip={`Registro ${recordType}`}
+                    >
+                      <span className="truncate">{`Registro ${recordType}`}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </>
+          )}
+        </SidebarContent>
+      </Sidebar>
+      <SidebarInset className="p-4 sm:p-6 lg:p-8">
+        {isProcessing && (
+          <div className="flex flex-col gap-4 items-center justify-center h-full">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-muted-foreground">Processando arquivo...</p>
+          </div>
+        )}
+
+        {!data && !isProcessing && (
+          <div className="flex items-center justify-center h-full">
+            <FileUploader onFileRead={handleFileRead} onProcessing={setIsProcessing} />
+          </div>
+        )}
+        
+        {data && !isProcessing && (
+          <div className="space-y-8">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+              <Button onClick={handleReset} variant="ghost" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Carregar Outro Arquivo
+              </Button>
+            </div>
+            
+            {selectedRecord ? (
+              <RecordDataView
+                recordType={selectedRecord}
+                records={data.records[selectedRecord] || []}
+              />
+            ) : (
               <>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      onClick={() => handleSelectSummary('operations')}
-                      isActive={!selectedRecord && activeView === 'operations'}
-                      className="w-full justify-start rounded-xl shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
-                      tooltip="Resumo das Operações"
-                    >
-                      <span>Resumo das Operações</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      onClick={() => handleSelectSummary('tax')}
-                      isActive={!selectedRecord && activeView === 'tax'}
-                      className="w-full justify-start rounded-xl shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
-                      tooltip="Resumo da Apuração"
-                    >
-                      <span>Resumo da Apuração</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-                <SidebarSeparator className="my-2" />
-                <SidebarMenu>
-                  {recordTypes.map(recordType => (
-                    <SidebarMenuItem key={recordType}>
-                      <SidebarMenuButton
-                        onClick={() => setSelectedRecord(recordType)}
-                        isActive={selectedRecord === recordType}
-                        className="w-full justify-start rounded-xl shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
-                        tooltip={`Registro ${recordType}`}
-                      >
-                        <span className="truncate">{`Registro ${recordType}`}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
+                {activeView === 'operations' && <OperationsSummary data={data.operationsSummary} />}
+                {activeView === 'tax' && <TaxSummary data={data.taxSummary} />}
               </>
             )}
-          </SidebarContent>
-        </Sidebar>
-        <SidebarInset>
-          <main className="p-4 sm:p-6 lg:p-8 flex-1">
-            {isProcessing && (
-              <div className="flex flex-col gap-4 items-center justify-center h-full min-h-[calc(100vh-4rem)]">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="text-muted-foreground">Processando arquivo...</p>
-              </div>
-            )}
-
-            {!data && !isProcessing && (
-              <div className="flex items-center justify-center h-full min-h-[calc(100vh-4rem)]">
-                <FileUploader onFileRead={handleFileRead} onProcessing={setIsProcessing} />
-              </div>
-            )}
-            
-            {data && !isProcessing && (
-              <div className="space-y-8">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-                  <Button onClick={handleReset} variant="ghost" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
-                    <RefreshCw className="mr-2 h-4 w-4" />
-                    Carregar Outro Arquivo
-                  </Button>
-                </div>
-                
-                {selectedRecord ? (
-                  <RecordDataView
-                    recordType={selectedRecord}
-                    records={data.records[selectedRecord] || []}
-                  />
-                ) : (
-                  <>
-                    {activeView === 'operations' && <OperationsSummary data={data.operationsSummary} />}
-                    {activeView === 'tax' && <TaxSummary data={data.taxSummary} />}
-                  </>
-                )}
-              </div>
-            )}
-          </main>
-        </SidebarInset>
-      </div>
+          </div>
+        )}
+      </SidebarInset>
     </SidebarProvider>
   );
 }
