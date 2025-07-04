@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { EfdRecord } from "@/lib/types";
-import { Info, ChevronLeft, ChevronRight, PlusCircle } from "lucide-react";
+import { Info, ChevronLeft, ChevronRight, PlusCircle, Trash2 } from "lucide-react";
 import { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +46,12 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
         }
       });
     }
-    onUpdate([...records, newRecord]);
+    onUpdate([newRecord, ...records]);
+  };
+  
+  const handleDeleteRow = (recordId: string) => {
+    const updatedRecords = records.filter(r => r._id !== recordId);
+    onUpdate(updatedRecords);
   };
 
   const headers = records.length > 0 ? Object.keys(records[0]).filter(h => h !== '_id') : [];
@@ -138,6 +143,7 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
             <Table className="w-max">
               <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-10">
                 <TableRow>
+                  <TableHead className="h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">Ações</TableHead>
                   {headers.map(header => (
                     <TableHead key={header} className="h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">{header}</TableHead>
                   ))}
@@ -146,13 +152,24 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
               <TableBody>
                 {paginatedRecords.map((record) => (
                   <TableRow key={record._id}>
+                    <TableCell className="p-0 whitespace-nowrap">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-auto w-auto p-0.5 text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDeleteRow(record._id!)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        <span className="sr-only">Excluir</span>
+                      </Button>
+                    </TableCell>
                     {headers.map(header => (
                       <TableCell key={`${record._id}-${header}`} className="p-0 whitespace-nowrap">
                          <input
                             type="text"
                             value={record[header] || ''}
                             onChange={(e) => handleFieldChange(record._id!, header, e.target.value)}
-                            size={Math.max(String(record[header] || '').length, 10)}
+                            size={Math.max(String(record[header] || '').length, header.length, 5) || 5}
                             className="h-auto bg-transparent px-1 py-0.5 text-[8px] border-none rounded-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                             disabled={header === 'REG'}
                          />
