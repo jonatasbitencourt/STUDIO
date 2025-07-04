@@ -148,8 +148,8 @@ export function recalculateSummaries(records: { [key: string]: EfdRecord[] }) {
   operationsSummaryEntradas.sort((a, b) => a.cfop.localeCompare(b.cfop));
   operationsSummarySaidas.sort((a, b) => a.cfop.localeCompare(b.cfop));
 
-  const taxSummaryPis = records['M200'] ? transformConsolidationRecordToTaxSummary(records['M200'][0]) : [];
-  const taxSummaryCofins = records['M600'] ? transformConsolidationRecordToTaxSummary(records['M600'][0]) : [];
+  const taxSummaryPis = records['M210'] ? transformConsolidationRecordToTaxSummary(records['M210'][0]) : [];
+  const taxSummaryCofins = records['M610'] ? transformConsolidationRecordToTaxSummary(records['M610'][0]) : [];
 
   return {
     operationsSummaryEntradas,
@@ -172,7 +172,7 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
 
     const fields = line.substring(1, line.length - 1).split('|');
     const regType = fields[0];
-    if (!regType) continue;
+    if (!regType || regType.startsWith('I') || regType.startsWith('P')) continue;
 
     const definition = RECORD_DEFINITIONS[regType];
     const headers = definition ? [...definition] : fields.map((_, i) => `CAMPO_${i}`);
