@@ -20,35 +20,35 @@ export function OperationsSummary({ data }: OperationsSummaryProps) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>DIRECAO</TableHead>
-              <TableHead>CFOP</TableHead>
-              <TableHead>CST_PIS_COF</TableHead>
-              <TableHead className="text-right">ALIQ_PIS</TableHead>
-              <TableHead className="text-right">ALIQ_COF</TableHead>
-              <TableHead className="text-right">VLR_TOT</TableHead>
-              <TableHead className="text-right">VLR_ICMS</TableHead>
-              <TableHead className="text-right">VLR_ST</TableHead>
-              <TableHead className="text-right">VLR_IPI</TableHead>
-              <TableHead className="text-right">VLR_BC_PIS_COF</TableHead>
-              <TableHead className="text-right">VLR_PIS</TableHead>
-              <TableHead className="text-right">VLR_COFINS</TableHead>
+              <TableHead className="text-xs">DIRECAO</TableHead>
+              <TableHead className="text-xs">CFOP</TableHead>
+              <TableHead className="text-xs">CST_PIS_COF</TableHead>
+              <TableHead className="text-right text-xs">ALIQ_PIS</TableHead>
+              <TableHead className="text-right text-xs">ALIQ_COF</TableHead>
+              <TableHead className="text-right text-xs">VLR_TOT</TableHead>
+              <TableHead className="text-right text-xs">VLR_ICMS</TableHead>
+              <TableHead className="text-right text-xs">VLR_ST</TableHead>
+              <TableHead className="text-right text-xs">VLR_IPI</TableHead>
+              <TableHead className="text-right text-xs">VLR_BC_PIS_COF</TableHead>
+              <TableHead className="text-right text-xs">VLR_PIS</TableHead>
+              <TableHead className="text-right text-xs">VLR_COFINS</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {data.map((item, index) => (
               <TableRow key={index}>
-                <TableCell className="font-medium">{item.direcao}</TableCell>
-                <TableCell>{item.cfop}</TableCell>
-                <TableCell>{item.cst_pis_cof}</TableCell>
-                <TableCell className="text-right">{formatPercent(item.aliq_pis)}</TableCell>
-                <TableCell className="text-right">{formatPercent(item.aliq_cof)}</TableCell>
-                <TableCell className="text-right">{formatCurrency(item.vlr_tot)}</TableCell>
-                <TableCell className="text-right">{formatCurrency(item.vlr_icms)}</TableCell>
-                <TableCell className="text-right">{formatCurrency(item.vlr_st)}</TableCell>
-                <TableCell className="text-right">{formatCurrency(item.vlr_ipi)}</TableCell>
-                <TableCell className="text-right">{formatCurrency(item.vlr_bc_pis_cof)}</TableCell>
-                <TableCell className="text-right">{formatCurrency(item.vlr_pis)}</TableCell>
-                <TableCell className="text-right">{formatCurrency(item.vlr_cofins)}</TableCell>
+                <TableCell className="font-medium text-xs">{item.direcao}</TableCell>
+                <TableCell className="text-xs">{item.cfop}</TableCell>
+                <TableCell className="text-xs">{item.cst_pis_cof}</TableCell>
+                <TableCell className="text-right text-xs">{formatPercent(item.aliq_pis)}</TableCell>
+                <TableCell className="text-right text-xs">{formatPercent(item.aliq_cof)}</TableCell>
+                <TableCell className="text-right text-xs">{formatCurrency(item.vlr_tot)}</TableCell>
+                <TableCell className="text-right text-xs">{formatCurrency(item.vlr_icms)}</TableCell>
+                <TableCell className="text-right text-xs">{formatCurrency(item.vlr_st)}</TableCell>
+                <TableCell className="text-right text-xs">{formatCurrency(item.vlr_ipi)}</TableCell>
+                <TableCell className="text-right text-xs">{formatCurrency(item.vlr_bc_pis_cof)}</TableCell>
+                <TableCell className="text-right text-xs">{formatCurrency(item.vlr_pis)}</TableCell>
+                <TableCell className="text-right text-xs">{formatCurrency(item.vlr_cofins)}</TableCell>
               </TableRow>
             ))}
           </TableBody>
