@@ -135,7 +135,7 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
       </CardHeader>
       <CardContent className="flex-grow overflow-hidden">
         <ScrollArea className="h-full">
-            <Table className="w-auto">
+            <Table className="w-max">
               <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-10">
                 <TableRow>
                   {headers.map(header => (
