@@ -102,7 +102,7 @@ export default function Home() {
             
             {data && !isProcessing && (
               <div className="space-y-8">
-                <div className="flex justify-between items-center">
+                <div className="flex flex-wrap items-center justify-between gap-4">
                   <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
                   <Button onClick={handleReset} variant="ghost" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
                     <RefreshCw className="mr-2 h-4 w-4" />
@@ -110,7 +110,7 @@ export default function Home() {
                   </Button>
                 </div>
                 
-                <div className="flex gap-4">
+                <div className="flex flex-wrap gap-4">
                   <Button 
                     onClick={() => setActiveView('operations')} 
                     variant={activeView === 'operations' ? 'default' : 'outline'}
@@ -127,17 +127,13 @@ export default function Home() {
                   </Button>
                 </div>
 
-                <div className="grid gap-8">
-                  {activeView === 'operations' && <OperationsSummary data={data.operationsSummary} />}
-                  {activeView === 'tax' && <TaxSummary data={data.taxSummary} />}
-                </div>
+                {activeView === 'operations' && <OperationsSummary data={data.operationsSummary} />}
+                {activeView === 'tax' && <TaxSummary data={data.taxSummary} />}
                 
-                <div>
-                  <RecordDataView
-                    recordType={selectedRecord || ''}
-                    records={selectedRecord ? data.records[selectedRecord] : []}
-                  />
-                </div>
+                <RecordDataView
+                  recordType={selectedRecord || ''}
+                  records={selectedRecord ? data.records[selectedRecord] : []}
+                />
               </div>
             )}
           </main>
