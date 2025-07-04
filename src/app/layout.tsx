@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'EFD Insights',
+  title: 'EFD Contribuições',
   description: 'Visualize EFD Contribuições files with ease.',
 };
 

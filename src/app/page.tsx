@@ -5,8 +5,8 @@ import type { ParsedEfdData } from '@/lib/types';
 import { parseEfdFile } from '@/lib/efd-parser';
 import { useToast } from "@/hooks/use-toast";
 
-import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator } from '@/components/ui/sidebar';
-import { EfdInsightsLogo } from '@/components/efd-insights-logo';
+import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator, SidebarFooter } from '@/components/ui/sidebar';
+import { AppLogo } from '@/components/efd-insights-logo';
 import { FileUploader } from '@/components/file-uploader';
 import { OperationsSummary } from '@/components/operations-summary';
 import { TaxSummary } from '@/components/tax-summary';
@@ -65,7 +65,7 @@ export default function Home() {
     <SidebarProvider>
       <Sidebar collapsible="icon">
         <SidebarHeader className="p-4">
-          <EfdInsightsLogo />
+          <AppLogo />
         </SidebarHeader>
         <SidebarContent>
           {data && (
@@ -130,6 +130,11 @@ export default function Home() {
             </>
           )}
         </SidebarContent>
+        <SidebarFooter className="p-4 mt-auto">
+          <p className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+            Developed by Jonatas Bitencourt
+          </p>
+        </SidebarFooter>
       </Sidebar>
       <SidebarInset className="p-4 sm:p-6 lg:p-8">
         {isProcessing && (

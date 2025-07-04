@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function EfdInsightsLogo(props: React.HTMLAttributes<HTMLDivElement>) {
+export function AppLogo(props: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div className="flex items-center gap-3 group/logo" {...props}>
       <div className="p-2 bg-background rounded-lg shadow-neumo-inset group-data-[collapsible=icon]:p-0">
@@ -24,7 +24,7 @@ export function EfdInsightsLogo(props: React.HTMLAttributes<HTMLDivElement>) {
         </svg>
       </div>
       <span className="font-bold text-lg text-foreground group-data-[collapsible=icon]:hidden">
-        EFD Insights
+        EFD Contribuições
       </span>
     </div>
   );
