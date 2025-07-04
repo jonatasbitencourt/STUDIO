@@ -148,11 +148,11 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
                   <TableRow key={record._id}>
                     {headers.map(header => (
                       <TableCell key={`${record._id}-${header}`} className="p-0 whitespace-nowrap">
-                         <Input
+                         <input
                             type="text"
                             value={record[header] || ''}
                             onChange={(e) => handleFieldChange(record._id!, header, e.target.value)}
-                            className="h-5 w-full text-[8px] border-none rounded-none focus-visible:ring-1 focus-visible:ring-ring bg-transparent px-1"
+                            className="h-auto w-full bg-transparent px-1 py-0.5 text-[8px] border-none rounded-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                             disabled={header === 'REG'}
                          />
                       </TableCell>
