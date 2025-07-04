@@ -7,8 +7,6 @@ export interface ParsedEfdData {
   operationsSummary: {
     direcao: string;
     cfop: string;
-    ind_nfe: string;
-    ind_frt: string;
     vlr_tot: number;
     vlr_icms: number;
     vlr_st: number;

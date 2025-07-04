@@ -98,17 +98,13 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
       const aliqPis = parseNumber(c170.ALIQ_PIS);
       const aliqCof = parseNumber(c170.ALIQ_COFINS);
       const indOper = currentC100.IND_OPER;
-      const indEmit = currentC100.IND_EMIT;
-      const indFrt = currentC100.IND_FRT;
 
-      const key = `${cfop}|${cstPis}|${cstCofins}|${aliqPis}|${aliqCof}|${indOper}|${indEmit}|${indFrt}`;
+      const key = `${cfop}|${cstPis}|${cstCofins}|${aliqPis}|${aliqCof}|${indOper}`;
 
       if (!operationsSummaryMap.has(key)) {
         operationsSummaryMap.set(key, {
           direcao: indOper === '0' ? 'Entrada' : 'Saída',
           cfop: cfop,
-          ind_nfe: indEmit === '0' ? 'Própria' : 'Terceiros',
-          ind_frt: indFrt,
           vlr_tot: 0,
           vlr_icms: 0,
           vlr_st: 0,
