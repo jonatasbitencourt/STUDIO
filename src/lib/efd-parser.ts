@@ -248,18 +248,6 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
     const regType = fields[0];
     if (!regType) continue;
 
-    if (regType === '0000') {
-      mainCnpj = fields[8] || ''; // CNPJ is at index 8
-    }
-
-    const block = regType.charAt(0).toUpperCase();
-    const identifierReg = `${block}010`;
-    if (regType === identifierReg) {
-        if (currentCnpjs.hasOwnProperty(block)) {
-            currentCnpjs[block] = fields[1]; // CNPJ is at index 1
-        }
-    }
-
     const definition = RECORD_DEFINITIONS[regType];
     const headers = definition ? [...definition] : fields.map((_, i) => `CAMPO_${i}`);
     if (definition) headers[0] = 'REG'; else headers[0] = 'REG';
@@ -268,10 +256,32 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
     headers.forEach((header, index) => {
       efdRecord[header] = fields[index] || '';
     });
-
-    if (['A', 'C', 'D', 'F', 'I', 'M', 'P'].includes(block)) {
-        efdRecord._cnpj = currentCnpjs[block] || mainCnpj;
+    
+    if (regType === '0000') {
+      mainCnpj = efdRecord.CNPJ || '';
     }
+
+    const block = regType.charAt(0).toUpperCase();
+
+    // CNPJ association logic
+    const identifierReg = `${block}010`;
+    if (regType === identifierReg && currentCnpjs.hasOwnProperty(block)) {
+        currentCnpjs[block] = efdRecord.CNPJ; // CNPJ is at index 1, which is the CNPJ property
+    } else if (regType === '0140') {
+        efdRecord._cnpj = efdRecord.CNPJ; // The record itself defines the establishment CNPJ
+    } else if (regType === '0500' && efdRecord.CNPJ_EST) {
+        efdRecord._cnpj = efdRecord.CNPJ_EST; // This record has a specific CNPJ_EST field
+    } else if (['A', 'C', 'D', 'F', 'I', 'M', 'P'].includes(block)) {
+        // Associate records in these blocks with the current establishment for the block
+        const cnpjForBlock = currentCnpjs[block];
+        if (cnpjForBlock) {
+             efdRecord._cnpj = cnpjForBlock;
+        } else if (regType !== `${block}001`) { // Don't assign main CNPJ to block openers if no specific one is set
+            // For other records in the block, if no X010 was found, assume it belongs to the main company
+             efdRecord._cnpj = mainCnpj;
+        }
+    }
+
 
     if (!records[regType]) {
       records[regType] = [];

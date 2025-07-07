@@ -39,23 +39,26 @@ export default function Home() {
 
     // Filter the records based on the selected CNPJ
     for (const type in allData.records) {
-        const block = type.charAt(0);
-        if (['0', '1', '9'].includes(block) || type === '0140') { // Keep global/structural blocks and establishments list
-            newRecords[type] = allData.records[type];
-        } else {
-            const kept = allData.records[type].filter(r => r._cnpj === selectedCnpj);
-            if (kept.length > 0) {
-                newRecords[type] = kept;
-            }
+        const recordsOfType = allData.records[type];
+        if (!recordsOfType || recordsOfType.length === 0) continue;
+
+        // Keep records that are for the selected CNPJ, or are global (no _cnpj property)
+        const kept = recordsOfType.filter(r => !r.hasOwnProperty('_cnpj') || r._cnpj === selectedCnpj);
+        
+        if (kept.length > 0) {
+            newRecords[type] = kept;
         }
     }
 
     // Adjust IND_MOV flag in block openers (e.g., C001) based on filtered data
     ['A', 'C', 'D', 'F', 'I', 'M', 'P'].forEach(block => {
         const openerType = `${block}001`;
-        if (allData.records[openerType]) {
+        // Find the original opener for the specific CNPJ (or the global one if it doesn't have a CNPJ)
+        const originalOpener = allData.records[openerType]?.find(r => r._cnpj === selectedCnpj || !r.hasOwnProperty('_cnpj'));
+
+        if (originalOpener) {
             const hasData = Object.keys(newRecords).some(type => type.startsWith(block) && type !== openerType);
-            newRecords[openerType] = [{ ...allData.records[openerType][0], IND_MOV: hasData ? '0' : '1' }];
+            newRecords[openerType] = [{ ...originalOpener, IND_MOV: hasData ? '0' : '1' }];
         }
     });
 
@@ -71,12 +74,9 @@ export default function Home() {
       setSelectedRecord(null);
       setActiveView('entradas');
     }
-     if (!selectedRecord) {
-      // Keep current activeView unless it's a record that disappeared
-    }
-
 
 }, [selectedCnpj, allData]);
+
 
   const handleFileRead = (content: string) => {
     try {
@@ -197,8 +197,15 @@ export default function Home() {
       
   const establishmentRecords = useMemo(() => allData?.records['0140'] || [], [allData]);
   
-  const isGlobalRecordSelected = selectedRecord && ['0', '1', '9'].includes(selectedRecord.charAt(0));
-  const showCnpjFilter = establishmentRecords.length > 1 && !isGlobalRecordSelected;
+  const canRecordTypeBeFiltered = useCallback((recordType: string | null) => {
+    if (!recordType) return true; // For summary views, filter is always relevant
+    if (!allData?.records[recordType]) return false;
+    // A record type can be filtered if at least one of its records has a _cnpj property.
+    return allData.records[recordType].some(r => r.hasOwnProperty('_cnpj'));
+  }, [allData]);
+
+  const showCnpjFilter = establishmentRecords.length > 1 && canRecordTypeBeFiltered(selectedRecord);
+
 
   return (
     <SidebarProvider>
