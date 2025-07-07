@@ -254,32 +254,35 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
       efdRecord[header] = fields[index] || '';
     });
     
-    // Update the last seen CNPJ when we encounter a context-setting record
-    if (regType === '0000') {
-      lastSeenCnpj = efdRecord.CNPJ || null;
-    } else if (regType.endsWith('010') && efdRecord.CNPJ) { // e.g., A010, C010, D010...
+    // Update the last seen CNPJ when we encounter a context-setting record.
+    // These records define the establishment for the subsequent data blocks.
+    if (regType.endsWith('010') && efdRecord.CNPJ) { // e.g., A010, C010, D010...
       lastSeenCnpj = efdRecord.CNPJ;
+    } else if (regType === '0000') {
+      // The 0000 record contains the main CNPJ of the declarant.
+      lastSeenCnpj = efdRecord.CNPJ || null;
     }
 
     // Assign CNPJ to records that are establishment-specific
     const block = regType.charAt(0).toUpperCase();
-    const regNum = parseInt(regType.substring(1), 10);
 
     // Specific records that have their own CNPJ field
     if (regType === '0140') {
+      // 0140 is the establishment table; it defines itself.
       efdRecord._cnpj = efdRecord.CNPJ;
     } else if (regType === '0500' && efdRecord.CNPJ_EST) {
+      // 0500 is the chart of accounts, which can be per-establishment.
       efdRecord._cnpj = efdRecord.CNPJ_EST;
-    // Records that belong to an establishment context
-    } else if (
-      (['A', 'C', 'D', 'F', 'I', 'M', 'P'].includes(block) && regType.endsWith('001') === false) ||
-      (block === '0' && regNum >= 150 && regNum <= 990)
-    ) {
+    // Records within operational blocks belong to the current establishment context.
+    } else if (['A', 'C', 'D', 'F', 'I', 'M', 'P'].includes(block) && !regType.endsWith('001')) {
+      // Any record in an operational block (A, C, D, etc.), except for the block opener (*001),
+      // belongs to the last establishment defined by a *010 record.
       if (lastSeenCnpj) {
         efdRecord._cnpj = lastSeenCnpj;
       }
     }
-
+    // Other records, especially in Bloco 0 (e.g., 0150, 0200, 0400), are treated as global.
+    // They will not have a `_cnpj` property and will thus be visible regardless of the filter.
 
     if (!records[regType]) {
       records[regType] = [];
