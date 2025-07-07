@@ -446,8 +446,8 @@ export default function Home() {
                 )}
                 {activeView === 'entradas' && <OperationsSummary data={data.operationsSummaryEntradas} />}
                 {activeView === 'saidas' && <OperationsSummary data={data.operationsSummarySaidas} />}
-                {activeView === 'apuracao_pis' && <TaxSummary data={data.taxSummaryPis} title="Apuração PIS" description="Detalhamento da apuração de PIS (Registros do Bloco M)" />}
-                {activeView === 'apuracao_cofins' && <TaxSummary data={data.taxSummaryCofins} title="Apuração COFINS" description="Detalhamento da apuração de COFINS (Registros do Bloco M)" />}
+                {activeView === 'apuracao_pis' && <TaxSummary data={data.taxSummaryPis} title="Apuração PIS" description="Detalhamento da apuração de PIS (Registro M200)" />}
+                {activeView === 'apuracao_cofins' && <TaxSummary data={data.taxSummaryCofins} title="Apuração COFINS" description="Detalhamento da apuração de COFINS (Registro M600)" />}
               </>
             )}
           </div>
