@@ -35,15 +35,39 @@ export default function Home() {
         return;
     }
 
+    // Step 1: Collect all relevant codes from records associated with the selected CNPJ.
+    const relevantItemCodes = new Set<string>();
+    const relevantParticipantCodes = new Set<string>();
+
+    for (const type in allData.records) {
+        const recordsOfType = allData.records[type];
+        if (!recordsOfType) continue;
+
+        recordsOfType.forEach(r => {
+            if (r._cnpj === selectedCnpj) {
+                if (r.COD_ITEM) relevantItemCodes.add(r.COD_ITEM);
+                if (r.COD_PART) relevantParticipantCodes.add(r.COD_PART);
+            }
+        });
+    }
+
     const newRecords: { [key: string]: EfdRecord[] } = {};
 
-    // Filter the records based on the selected CNPJ
+    // Step 2: Build the new filtered record set.
     for (const type in allData.records) {
         const recordsOfType = allData.records[type];
         if (!recordsOfType || recordsOfType.length === 0) continue;
 
-        // Keep records that are for the selected CNPJ, or are global (no _cnpj property)
-        const kept = recordsOfType.filter(r => !r.hasOwnProperty('_cnpj') || r._cnpj === selectedCnpj);
+        let kept: EfdRecord[];
+
+        if (type === '0150') {
+            kept = recordsOfType.filter(r => relevantParticipantCodes.has(r.COD_PART!));
+        } else if (type === '0200') {
+            kept = recordsOfType.filter(r => relevantItemCodes.has(r.COD_ITEM!));
+        } else {
+            // Default behavior: keep records that are for the selected CNPJ, or are truly global (no _cnpj property)
+            kept = recordsOfType.filter(r => !r.hasOwnProperty('_cnpj') || r._cnpj === selectedCnpj);
+        }
         
         if (kept.length > 0) {
             newRecords[type] = kept;
@@ -53,12 +77,15 @@ export default function Home() {
     // Adjust IND_MOV flag in block openers (e.g., C001) based on filtered data
     ['A', 'C', 'D', 'F', 'I', 'M', 'P'].forEach(block => {
         const openerType = `${block}001`;
-        // Find the original opener for the specific CNPJ (or the global one if it doesn't have a CNPJ)
-        const originalOpener = allData.records[openerType]?.find(r => r._cnpj === selectedCnpj || !r.hasOwnProperty('_cnpj'));
+        const originalOpener = allData.records[openerType]?.[0];
 
         if (originalOpener) {
             const hasData = Object.keys(newRecords).some(type => type.startsWith(block) && type !== openerType);
-            newRecords[openerType] = [{ ...originalOpener, IND_MOV: hasData ? '0' : '1' }];
+            if (newRecords[openerType]) {
+              newRecords[openerType] = [{ ...newRecords[openerType][0], IND_MOV: hasData ? '0' : '1' }];
+            } else if (allData.records[openerType]) {
+              newRecords[openerType] = [{ ...allData.records[openerType][0], IND_MOV: hasData ? '0' : '1' }];
+            }
         }
     });
 
@@ -198,11 +225,24 @@ export default function Home() {
   const establishmentRecords = useMemo(() => allData?.records['0140'] || [], [allData]);
   
   const canRecordTypeBeFiltered = useCallback((recordType: string | null) => {
-    if (!recordType) return true; // For summary views, filter is always relevant
+    // For summary views (recordType is null)
+    if (!recordType) {
+      // Don't show filter for PIS/COFINS summaries, as they are consolidated.
+      if (activeView === 'apuracao_pis' || activeView === 'apuracao_cofins') {
+        return false;
+      }
+      return true; // Show for other summaries like 'entradas', 'saidas', 'estabelecimentos'.
+    }
+    
+    // For specific record views
     if (!allData?.records[recordType]) return false;
+
+    // Special handling for items and participants: they can be filtered by context.
+    if (recordType === '0150' || recordType === '0200') return true;
+
     // A record type can be filtered if at least one of its records has a _cnpj property.
     return allData.records[recordType].some(r => r.hasOwnProperty('_cnpj'));
-  }, [allData]);
+  }, [allData, activeView]);
 
   const showCnpjFilter = establishmentRecords.length > 1 && canRecordTypeBeFiltered(selectedRecord);
 
@@ -400,7 +440,7 @@ export default function Home() {
                    <RecordDataView
                       key={`all-data-0140-${selectedCnpj}`}
                       recordType="0140"
-                      records={allData.records['0140'] || []}
+                      records={data.records['0140'] || []}
                       onUpdate={(updatedRecords) => handleRecordsUpdate(updatedRecords, '0140')}
                    />
                 )}

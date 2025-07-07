@@ -274,7 +274,8 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
       // 0500 is the chart of accounts, which can be per-establishment.
       efdRecord._cnpj = efdRecord.CNPJ_EST;
     // Records within operational blocks belong to the current establishment context.
-    } else if (['A', 'C', 'D', 'F', 'I', 'M', 'P'].includes(block) && !regType.endsWith('001')) {
+    // Blocks M (PIS/COFINS) and P (Previdenciária) are consolidated and not per-establishment.
+    } else if (['A', 'C', 'D', 'F', 'I'].includes(block) && !regType.endsWith('001')) {
       // Any record in an operational block (A, C, D, etc.), except for the block opener (*001),
       // belongs to the last establishment defined by a *010 record.
       if (lastSeenCnpj) {
