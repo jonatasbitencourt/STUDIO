@@ -236,10 +236,7 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
   let idCounter = 0;
   let currentC100: EfdRecord | null = null;
   
-  let mainCnpj = '';
-  const currentCnpjs: {[key: string]: string | null} = {
-    A: null, C: null, D: null, F: null, I: null, M: null, P: null
-  };
+  let lastSeenCnpj: string | null = null;
 
   for (const line of lines) {
     if (!line || !line.startsWith('|')) continue;
@@ -257,29 +254,30 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
       efdRecord[header] = fields[index] || '';
     });
     
+    // Update the last seen CNPJ when we encounter a context-setting record
     if (regType === '0000') {
-      mainCnpj = efdRecord.CNPJ || '';
+      lastSeenCnpj = efdRecord.CNPJ || null;
+    } else if (regType.endsWith('010') && efdRecord.CNPJ) { // e.g., A010, C010, D010...
+      lastSeenCnpj = efdRecord.CNPJ;
     }
 
+    // Assign CNPJ to records that are establishment-specific
     const block = regType.charAt(0).toUpperCase();
+    const regNum = parseInt(regType.substring(1), 10);
 
-    // CNPJ association logic
-    const identifierReg = `${block}010`;
-    if (regType === identifierReg && currentCnpjs.hasOwnProperty(block)) {
-        currentCnpjs[block] = efdRecord.CNPJ; // CNPJ is at index 1, which is the CNPJ property
-    } else if (regType === '0140') {
-        efdRecord._cnpj = efdRecord.CNPJ; // The record itself defines the establishment CNPJ
+    // Specific records that have their own CNPJ field
+    if (regType === '0140') {
+      efdRecord._cnpj = efdRecord.CNPJ;
     } else if (regType === '0500' && efdRecord.CNPJ_EST) {
-        efdRecord._cnpj = efdRecord.CNPJ_EST; // This record has a specific CNPJ_EST field
-    } else if (['A', 'C', 'D', 'F', 'I', 'M', 'P'].includes(block)) {
-        // Associate records in these blocks with the current establishment for the block
-        const cnpjForBlock = currentCnpjs[block];
-        if (cnpjForBlock) {
-             efdRecord._cnpj = cnpjForBlock;
-        } else if (regType !== `${block}001`) { // Don't assign main CNPJ to block openers if no specific one is set
-            // For other records in the block, if no X010 was found, assume it belongs to the main company
-             efdRecord._cnpj = mainCnpj;
-        }
+      efdRecord._cnpj = efdRecord.CNPJ_EST;
+    // Records that belong to an establishment context
+    } else if (
+      (['A', 'C', 'D', 'F', 'I', 'M', 'P'].includes(block) && regType.endsWith('001') === false) ||
+      (block === '0' && regNum >= 150 && regNum <= 990)
+    ) {
+      if (lastSeenCnpj) {
+        efdRecord._cnpj = lastSeenCnpj;
+      }
     }
 
 
