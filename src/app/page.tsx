@@ -114,7 +114,7 @@ export default function Home() {
       .sort((a, b) => { // Sorting logic
           const blockA = a.charAt(0);
           const blockB = b.charAt(0);
-          const blockOrder = ['0', 'A', 'C', 'D', 'F', 'M', '1', '9'];
+          const blockOrder = ['0', 'A', 'C', 'D', 'F', 'I', 'M', 'P', '1', '9'];
           const indexA = blockOrder.indexOf(blockA);
           const indexB = blockOrder.indexOf(blockB);
 
