@@ -11,8 +11,10 @@ import { FileUploader } from '@/components/file-uploader';
 import { OperationsSummary } from '@/components/operations-summary';
 import { TaxSummary } from '@/components/tax-summary';
 import { RecordDataView } from '@/components/record-data-view';
-import { Loader2, RefreshCw, Download } from 'lucide-react';
+import { Loader2, RefreshCw, Download, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { recordHierarchy } from '@/lib/efd-structure';
 
 export default function Home() {
   const [data, setData] = useState<ParsedEfdData | null>(null);
@@ -105,7 +107,22 @@ export default function Home() {
     }
   };
 
-  const recordTypes = data ? Object.keys(data.records) : [];
+  const allRecordTypes = data ? Object.keys(data.records) : [];
+  const childRecords = new Set(Object.values(recordHierarchy).flat());
+  const parentRecords = allRecordTypes
+      .filter(recordType => !childRecords.has(recordType))
+      .sort((a, b) => { // Sorting logic
+          const blockA = a.charAt(0);
+          const blockB = b.charAt(0);
+          const blockOrder = ['0', 'A', 'C', 'D', 'F', 'M', '1', '9'];
+          const indexA = blockOrder.indexOf(blockA);
+          const indexB = blockOrder.indexOf(blockB);
+
+          if (indexA !== indexB) {
+              return indexA - indexB;
+          }
+          return a.localeCompare(b);
+      });
 
   return (
     <SidebarProvider>
@@ -160,18 +177,61 @@ export default function Home() {
               </SidebarMenu>
               <SidebarSeparator className="my-2" />
               <SidebarMenu>
-                {recordTypes.map(recordType => (
-                  <SidebarMenuItem key={recordType}>
-                    <SidebarMenuButton
-                      onClick={() => setSelectedRecord(recordType)}
-                      isActive={selectedRecord === recordType}
-                      className="w-full justify-start rounded-xl shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
-                      tooltip={`Registro ${recordType}`}
-                    >
-                      <span className="truncate">{`Registro ${recordType}`}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {parentRecords.map(recordType => {
+                  const children = recordHierarchy[recordType]?.filter(child => allRecordTypes.includes(child));
+                  const hasChildren = children && children.length > 0;
+
+                  if (hasChildren) {
+                    return (
+                      <Collapsible key={recordType} className="w-full">
+                        <SidebarMenuItem className="flex items-center gap-0.5">
+                          <SidebarMenuButton
+                            onClick={() => setSelectedRecord(recordType)}
+                            isActive={selectedRecord === recordType}
+                            className="flex-grow justify-start rounded-r-none shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
+                            tooltip={`Registro ${recordType}`}
+                          >
+                            <span className="truncate">{`Registro ${recordType}`}</span>
+                          </SidebarMenuButton>
+                          <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-full rounded-l-none shadow-neumo active:shadow-neumo-inset data-[state=open]:bg-primary/10">
+                              <ChevronRight className="h-4 w-4 transition-transform data-[state=open]:rotate-90" />
+                            </Button>
+                          </CollapsibleTrigger>
+                        </SidebarMenuItem>
+                        <CollapsibleContent>
+                          <div className="pl-4 my-1 space-y-1">
+                            {children.map(childType => (
+                              <SidebarMenuItem key={childType}>
+                                <SidebarMenuButton
+                                  onClick={() => setSelectedRecord(childType)}
+                                  isActive={selectedRecord === childType}
+                                  className="w-full justify-start rounded-xl shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
+                                  tooltip={`Registro ${childType}`}
+                                >
+                                  <span className="truncate text-xs font-normal pl-4">{`Registro ${childType}`}</span>
+                                </SidebarMenuButton>
+                              </SidebarMenuItem>
+                            ))}
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    )
+                  }
+
+                  return (
+                    <SidebarMenuItem key={recordType}>
+                      <SidebarMenuButton
+                        onClick={() => setSelectedRecord(recordType)}
+                        isActive={selectedRecord === recordType}
+                        className="w-full justify-start rounded-xl shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
+                        tooltip={`Registro ${recordType}`}
+                      >
+                        <span className="truncate">{`Registro ${recordType}`}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </>
           )}
