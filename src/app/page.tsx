@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
 import type { ParsedEfdData, EfdRecord } from '@/lib/types';
 import { parseEfdFile, recalculateSummaries, exportRecordsToEfdText } from '@/lib/efd-parser';
 import { useToast } from "@/hooks/use-toast";
@@ -23,7 +23,7 @@ export default function Home() {
   const [data, setData] = useState<ParsedEfdData | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [activeView, setActiveView] = useState<'entradas' | 'saidas' | 'apuracao_pis' | 'apuracao_cofins' | null>('entradas');
+  const [activeView, setActiveView] = useState<'entradas' | 'saidas' | 'apuracao_pis' | 'apuracao_cofins' | 'estabelecimentos' | null>('entradas');
   const [selectedCnpj, setSelectedCnpj] = useState<string>('all');
   const { toast } = useToast();
 
@@ -40,8 +40,8 @@ export default function Home() {
     // Filter the records based on the selected CNPJ
     for (const type in allData.records) {
         const block = type.charAt(0);
-        if (['0', '1', '9'].includes(block)) {
-            newRecords[type] = allData.records[type]; // Keep global/structural blocks
+        if (['0', '1', '9'].includes(block) || type === '0140') { // Keep global/structural blocks and establishments list
+            newRecords[type] = allData.records[type];
         } else {
             const kept = allData.records[type].filter(r => r._cnpj === selectedCnpj);
             if (kept.length > 0) {
@@ -72,7 +72,7 @@ export default function Home() {
       setActiveView('entradas');
     }
      if (!selectedRecord) {
-      setActiveView('entradas');
+      // Keep current activeView unless it's a record that disappeared
     }
 
 
@@ -181,7 +181,7 @@ export default function Home() {
   const allRecordTypes = data ? Object.keys(data.records) : [];
   const childRecords = new Set(Object.values(recordHierarchy).flat());
   const parentRecords = allRecordTypes
-      .filter(recordType => !childRecords.has(recordType))
+      .filter(recordType => !childRecords.has(recordType) && recordType !== '0140') // Exclude 0140 from the list
       .sort((a, b) => { // Sorting logic
           const blockA = a.charAt(0);
           const blockB = b.charAt(0);
@@ -207,6 +207,16 @@ export default function Home() {
           {data && (
             <>
               <SidebarMenu>
+                 <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => handleSelectView('estabelecimentos')}
+                    isActive={activeView === 'estabelecimentos' && !selectedRecord}
+                    className="w-full justify-start rounded-xl shadow-neumo active:shadow-neumo-inset data-[active=true]:shadow-neumo-inset data-[active=true]:bg-primary/20"
+                    tooltip="Ver Estabelecimentos"
+                  >
+                    <span>Estabelecimentos</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     onClick={() => handleSelectView('entradas')}
@@ -376,6 +386,14 @@ export default function Home() {
               />
             ) : (
               <>
+                {activeView === 'estabelecimentos' && allData && (
+                   <RecordDataView
+                      key={`all-data-0140-${selectedCnpj}`}
+                      recordType="0140"
+                      records={allData.records['0140'] || []}
+                      onUpdate={(updatedRecords) => handleRecordsUpdate(updatedRecords, '0140')}
+                   />
+                )}
                 {activeView === 'entradas' && <OperationsSummary data={data.operationsSummaryEntradas} />}
                 {activeView === 'saidas' && <OperationsSummary data={data.operationsSummarySaidas} />}
                 {activeView === 'apuracao_pis' && <TaxSummary data={data.taxSummaryPis} title="Apuração PIS" description="Detalhamento da apuração de PIS (Registros do Bloco M)" />}
