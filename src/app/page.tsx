@@ -196,6 +196,9 @@ export default function Home() {
       });
       
   const establishmentRecords = useMemo(() => allData?.records['0140'] || [], [allData]);
+  
+  const isGlobalRecordSelected = selectedRecord && ['0', '1', '9'].includes(selectedRecord.charAt(0));
+  const showCnpjFilter = establishmentRecords.length > 1 && !isGlobalRecordSelected;
 
   return (
     <SidebarProvider>
@@ -344,14 +347,14 @@ export default function Home() {
             <div className="flex flex-wrap items-center justify-between gap-4">
                <div className="flex flex-col">
                  <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-                 {establishmentRecords.length > 1 && (
+                 {showCnpjFilter && (
                     <p className="text-sm text-muted-foreground">
                         {selectedCnpj === 'all' ? 'Exibindo todos os estabelecimentos' : `Exibindo dados para: ${selectedCnpj}`}
                     </p>
                  )}
                </div>
                <div className="flex items-center gap-2">
-                 {establishmentRecords.length > 1 && (
+                 {showCnpjFilter && (
                     <Select value={selectedCnpj} onValueChange={setSelectedCnpj}>
                       <SelectTrigger className="w-[280px] shadow-neumo active:shadow-neumo-inset rounded-xl">
                         <SelectValue placeholder="Filtrar por Estabelecimento" />
