@@ -154,7 +154,7 @@ function transformConsolidationRecordToTaxSummary(record: EfdRecord): TaxSummary
   const headers = RECORD_DEFINITIONS[record.REG] || Object.keys(record);
 
   for (const attribute of headers) {
-    if (attribute === 'REG' || attribute === '_id') continue;
+    if (attribute === 'REG' || attribute === '_id' || attribute === '_cnpj') continue;
     const valueStr = record[attribute];
     if (valueStr !== undefined) {
       summary.push({
@@ -235,6 +235,11 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
   const records: { [key: string]: EfdRecord[] } = {};
   let idCounter = 0;
   let currentC100: EfdRecord | null = null;
+  
+  let mainCnpj = '';
+  const currentCnpjs: {[key: string]: string | null} = {
+    A: null, C: null, D: null, F: null, I: null, M: null, P: null
+  };
 
   for (const line of lines) {
     if (!line || !line.startsWith('|')) continue;
@@ -242,6 +247,18 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
     const fields = line.substring(1, line.length - 1).split('|');
     const regType = fields[0];
     if (!regType) continue;
+
+    if (regType === '0000') {
+      mainCnpj = fields[8] || ''; // CNPJ is at index 8
+    }
+
+    const block = regType.charAt(0).toUpperCase();
+    const identifierReg = `${block}010`;
+    if (regType === identifierReg) {
+        if (currentCnpjs.hasOwnProperty(block)) {
+            currentCnpjs[block] = fields[1]; // CNPJ is at index 1
+        }
+    }
 
     const definition = RECORD_DEFINITIONS[regType];
     const headers = definition ? [...definition] : fields.map((_, i) => `CAMPO_${i}`);
@@ -251,6 +268,10 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
     headers.forEach((header, index) => {
       efdRecord[header] = fields[index] || '';
     });
+
+    if (['A', 'C', 'D', 'F', 'I', 'M', 'P'].includes(block)) {
+        efdRecord._cnpj = currentCnpjs[block] || mainCnpj;
+    }
 
     if (!records[regType]) {
       records[regType] = [];
@@ -284,7 +305,7 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
     const blockOrder = ['0', 'A', 'C', 'D', 'F', 'M', 'P', 'I', '1', '9'];
     let text = '';
 
-    const allRecordTypes = Object.keys(records).sort();
+    const allRecordTypes = Object.keys(records);
     
     const sortedTypesByBlock = allRecordTypes.sort((a, b) => {
         const blockA = a.charAt(0);
@@ -300,7 +321,15 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
 
     for (const recordType of sortedTypesByBlock) {
         if (!records[recordType] || records[recordType].length === 0) continue;
-        const definition = RECORD_DEFINITIONS[recordType] || Object.keys(records[recordType][0]).filter(h => h !== '_id');
+        
+        // Skip empty structural blocks on export
+        if (recordType.endsWith('001') && records[recordType][0]?.IND_MOV === '1') {
+            const block = recordType.charAt(0);
+            const hasDataInBlock = allRecordTypes.some(rt => rt.startsWith(block) && rt !== recordType);
+            if (!hasDataInBlock) continue;
+        }
+
+        const definition = RECORD_DEFINITIONS[recordType] || Object.keys(records[recordType][0]).filter(h => h !== '_id' && h !== '_cnpj');
         
         for (const record of records[recordType]) {
             const fields = definition.map(header => record[header] || '');

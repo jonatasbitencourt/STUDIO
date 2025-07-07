@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import type { ParsedEfdData, EfdRecord } from '@/lib/types';
 import { parseEfdFile, recalculateSummaries, exportRecordsToEfdText } from '@/lib/efd-parser';
 import { useToast } from "@/hooks/use-toast";
@@ -15,13 +15,68 @@ import { Loader2, RefreshCw, Download, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { recordHierarchy } from '@/lib/efd-structure';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 export default function Home() {
+  const [allData, setAllData] = useState<ParsedEfdData | null>(null);
   const [data, setData] = useState<ParsedEfdData | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeView, setActiveView] = useState<'entradas' | 'saidas' | 'apuracao_pis' | 'apuracao_cofins' | null>('entradas');
+  const [selectedCnpj, setSelectedCnpj] = useState<string>('all');
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (!allData) return;
+
+    if (selectedCnpj === 'all') {
+        setData(allData);
+        return;
+    }
+
+    const newRecords: { [key: string]: EfdRecord[] } = {};
+
+    // Filter the records based on the selected CNPJ
+    for (const type in allData.records) {
+        const block = type.charAt(0);
+        if (['0', '1', '9'].includes(block)) {
+            newRecords[type] = allData.records[type]; // Keep global/structural blocks
+        } else {
+            const kept = allData.records[type].filter(r => r._cnpj === selectedCnpj);
+            if (kept.length > 0) {
+                newRecords[type] = kept;
+            }
+        }
+    }
+
+    // Adjust IND_MOV flag in block openers (e.g., C001) based on filtered data
+    ['A', 'C', 'D', 'F', 'I', 'M', 'P'].forEach(block => {
+        const openerType = `${block}001`;
+        if (allData.records[openerType]) {
+            const hasData = Object.keys(newRecords).some(type => type.startsWith(block) && type !== openerType);
+            newRecords[openerType] = [{ ...allData.records[openerType][0], IND_MOV: hasData ? '0' : '1' }];
+        }
+    });
+
+    const newSummaries = recalculateSummaries(newRecords);
+
+    setData({
+        records: newRecords,
+        ...newSummaries,
+    });
+
+    // Reset view if the current selection is not available in the filtered data
+    if (selectedRecord && !newRecords[selectedRecord]) {
+      setSelectedRecord(null);
+      setActiveView('entradas');
+    }
+     if (!selectedRecord) {
+      setActiveView('entradas');
+    }
+
+
+}, [selectedCnpj, allData]);
 
   const handleFileRead = (content: string) => {
     try {
@@ -34,9 +89,11 @@ export default function Home() {
         return;
       }
       const parsedData = parseEfdFile(content);
+      setAllData(parsedData);
       setData(parsedData);
       setActiveView('entradas');
       setSelectedRecord(null);
+      setSelectedCnpj('all');
     } catch (error) {
       console.error("Parsing error:", error);
       toast({
@@ -48,10 +105,12 @@ export default function Home() {
   };
 
   const handleReset = () => {
+    setAllData(null);
     setData(null);
     setSelectedRecord(null);
     setIsProcessing(false);
     setActiveView('entradas');
+    setSelectedCnpj('all');
   };
 
   const handleSelectView = (view: typeof activeView) => {
@@ -60,19 +119,30 @@ export default function Home() {
   };
   
   const handleRecordsUpdate = (updatedRecordList: EfdRecord[], recordType: string) => {
-      if (!data) return;
-      
-      const updatedRecords = {
-          ...data.records,
-          [recordType]: updatedRecordList,
+      if (!data || !allData) return;
+
+      const updateSourceData = (source: ParsedEfdData) => {
+        const updatedRecords = {
+            ...source.records,
+            [recordType]: updatedRecordList,
+        };
+        const newSummaries = recalculateSummaries(updatedRecords);
+        return {
+            records: updatedRecords,
+            ...newSummaries,
+        };
       };
+      
+      const newAllData = updateSourceData(allData);
+      setAllData(newAllData);
 
-      const newSummaries = recalculateSummaries(updatedRecords);
-
-      setData({
-          records: updatedRecords,
-          ...newSummaries,
-      });
+      // If a filter is active, update the displayed data as well
+      if (selectedCnpj !== 'all') {
+         const newDisplayData = updateSourceData(data);
+         setData(newDisplayData);
+      } else {
+         setData(newAllData);
+      }
   };
 
   const handleExport = () => {
@@ -89,7 +159,8 @@ export default function Home() {
         const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
         const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = 'EFD_CONTRIBUICOES_ALTERADO.txt';
+        const cnpjSuffix = selectedCnpj === 'all' ? 'TODOS' : selectedCnpj;
+        link.download = `EFD_CONTRIBUICOES_${cnpjSuffix}.txt`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -123,6 +194,8 @@ export default function Home() {
           }
           return a.localeCompare(b);
       });
+      
+  const establishmentRecords = useMemo(() => allData?.records['0140'] || [], [allData]);
 
   return (
     <SidebarProvider>
@@ -259,22 +332,44 @@ export default function Home() {
         {data && !isProcessing && (
           <div className="space-y-8">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-              <div className="flex gap-2">
+               <div className="flex flex-col">
+                 <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+                 {establishmentRecords.length > 1 && (
+                    <p className="text-sm text-muted-foreground">
+                        {selectedCnpj === 'all' ? 'Exibindo todos os estabelecimentos' : `Exibindo dados para: ${selectedCnpj}`}
+                    </p>
+                 )}
+               </div>
+               <div className="flex items-center gap-2">
+                 {establishmentRecords.length > 1 && (
+                    <Select value={selectedCnpj} onValueChange={setSelectedCnpj}>
+                      <SelectTrigger className="w-[280px] shadow-neumo active:shadow-neumo-inset rounded-xl">
+                        <SelectValue placeholder="Filtrar por Estabelecimento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os Estabelecimentos</SelectItem>
+                        {establishmentRecords.map((est) => (
+                          <SelectItem key={est.CNPJ} value={est.CNPJ!}>
+                            {`${est.NOME} (${est.CNPJ})`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                 <Button onClick={handleExport} variant="outline" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
                   <Download className="mr-2 h-4 w-4" />
                   Exportar Arquivo
                 </Button>
                 <Button onClick={handleReset} variant="ghost" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Carregar Outro Arquivo
+                  Carregar Outro
                 </Button>
               </div>
             </div>
             
             {selectedRecord ? (
               <RecordDataView
-                key={selectedRecord}
+                key={`${selectedCnpj}-${selectedRecord}`}
                 recordType={selectedRecord}
                 records={data.records[selectedRecord] || []}
                 onUpdate={(updatedRecords) => handleRecordsUpdate(updatedRecords, selectedRecord)}
