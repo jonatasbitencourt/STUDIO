@@ -146,30 +146,43 @@ export default function Home() {
   };
   
   const handleRecordsUpdate = (updatedRecordList: EfdRecord[], recordType: string) => {
-      if (!data || !allData) return;
+    if (!allData) return;
 
-      const updateSourceData = (source: ParsedEfdData) => {
-        const updatedRecords = {
-            ...source.records,
-            [recordType]: updatedRecordList,
-        };
-        const newSummaries = recalculateSummaries(updatedRecords);
-        return {
-            records: updatedRecords,
-            ...newSummaries,
-        };
-      };
-      
-      const newAllData = updateSourceData(allData);
-      setAllData(newAllData);
+    // Create a map of the updated records for efficient lookup.
+    const updatedRecordsMap = new Map(updatedRecordList.map(r => [r._id, r]));
 
-      // If a filter is active, update the displayed data as well
-      if (selectedCnpj !== 'all') {
-         const newDisplayData = updateSourceData(data);
-         setData(newDisplayData);
-      } else {
-         setData(newAllData);
-      }
+    // Get the original full list of records for the type from the source of truth.
+    const originalRecordList = allData.records[recordType] || [];
+
+    // Create a new full list by merging the changes.
+    // If a record from the original list exists in the updated map, use the updated version.
+    // Otherwise, keep the original record. This preserves records that were filtered out of the view.
+    const mergedList = originalRecordList.map(
+      originalRecord => updatedRecordsMap.get(originalRecord._id) ?? originalRecord
+    );
+
+    // Identify records that were newly added in the UI (they won't be in the original list).
+    const addedRecords = updatedRecordList.filter(
+      updatedRecord => !originalRecordList.some(originalRecord => originalRecord._id === updatedRecord._id)
+    );
+
+    // Combine the merged list with any newly added records.
+    const finalUpdatedList = [...mergedList, ...addedRecords];
+
+    const newAllDataRecords = {
+      ...allData.records,
+      [recordType]: finalUpdatedList,
+    };
+
+    const newSummaries = recalculateSummaries(newAllDataRecords);
+
+    const newAllData = {
+        records: newAllDataRecords,
+        ...newSummaries,
+    };
+    
+    // Update only the single source of truth. The useEffect will propagate changes to the `data` state.
+    setAllData(newAllData);
   };
 
   const handleRecordDelete = (recordToDelete: EfdRecord) => {
