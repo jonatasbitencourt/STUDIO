@@ -133,7 +133,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
   }, [onRecordsUpdate, recordType, records]);
 
   const handleBatchAdd = useCallback(() => {
-    const headersToParse = ['IND_ORI_DED', 'VL_DED_PIS', 'VL_DED_COFINS', 'CNPJ', 'INFO_COMPL'];
+    const headersToParse = ['IND_ORI_DED', 'IND_NAT_DED', 'VL_DED_PIS', 'VL_DED_COFINS', 'VL_BC_OPER', 'CNPJ', 'INFO_COMPL'];
     const lines = batchAddText.trim().split('\n').filter(line => line.trim() !== '');
 
     if (lines.length === 0) {
@@ -306,7 +306,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
             <DialogHeader>
             <DialogTitle>Adicionar Registros F700 em Lote</DialogTitle>
             <DialogDescription>
-                Copie as colunas do Excel e cole abaixo. As colunas devem estar na ordem: IND_ORI_DED, VL_DED_PIS, VL_DED_COFINS, CNPJ, INFO_COMPL.
+                Copie as colunas do Excel e cole abaixo. As colunas devem estar na ordem: IND_ORI_DED, IND_NAT_DED, VL_DED_PIS, VL_DED_COFINS, VL_BC_OPER, CNPJ, INFO_COMPL.
             </DialogDescription>
             </DialogHeader>
             <Textarea
@@ -324,3 +324,5 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
     </Card>
   );
 }
+
+    
