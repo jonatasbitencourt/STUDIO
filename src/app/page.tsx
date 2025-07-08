@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
 import type { ParsedEfdData, EfdRecord } from '@/lib/types';
-import { parseEfdFile, recalculateSummaries, exportRecordsToEfdText } from '@/lib/efd-parser';
+import { parseEfdFile, recalculateSummaries } from '@/lib/efd-parser';
 import { useToast } from "@/hooks/use-toast";
 
 import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator, SidebarFooter } from '@/components/ui/sidebar';
@@ -30,109 +30,109 @@ export default function Home() {
   useEffect(() => {
     if (!allData) return;
 
-    if (selectedCnpj === 'all') {
-        const newSummaries = recalculateSummaries(allData.records);
-        setData({
-          records: allData.records,
-          ...newSummaries
-        });
-        return;
-    }
-
-    // Step 1: Collect all relevant codes from records associated with the selected CNPJ.
-    const relevantItemCodes = new Set<string>();
-    const relevantParticipantCodes = new Set<string>();
-
-    for (const type in allData.records) {
-        const recordsOfType = allData.records[type];
-        if (!recordsOfType) continue;
-
-        recordsOfType.forEach(r => {
-            if (r._cnpj === selectedCnpj) {
-                if (r.COD_ITEM) relevantItemCodes.add(r.COD_ITEM);
-                if (r.COD_PART) relevantParticipantCodes.add(r.COD_PART);
+    const processAndSetData = async () => {
+        setIsProcessing(true);
+        try {
+            if (selectedCnpj === 'all') {
+                const newSummaries = await recalculateSummaries(allData.records);
+                setData({
+                  records: allData.records,
+                  ...newSummaries
+                });
+                return;
             }
-        });
-    }
 
-    const newRecords: { [key: string]: EfdRecord[] } = {};
+            // Step 1: Collect all relevant codes from records associated with the selected CNPJ.
+            const relevantItemCodes = new Set<string>();
+            const relevantParticipantCodes = new Set<string>();
 
-    // Step 2: Build the new filtered record set.
-    for (const type in allData.records) {
-        const recordsOfType = allData.records[type];
-        if (!recordsOfType || recordsOfType.length === 0) continue;
+            for (const type in allData.records) {
+                const recordsOfType = allData.records[type];
+                if (!recordsOfType) continue;
 
-        let kept: EfdRecord[];
-
-        if (type === '0150') {
-            kept = recordsOfType.filter(r => relevantParticipantCodes.has(r.COD_PART!));
-        } else if (type === '0200') {
-            kept = recordsOfType.filter(r => relevantItemCodes.has(r.COD_ITEM!));
-        } else {
-            // Default behavior: keep records that are for the selected CNPJ, or are truly global (no _cnpj property)
-            kept = recordsOfType.filter(r => !r.hasOwnProperty('_cnpj') || r._cnpj === selectedCnpj);
-        }
-        
-        if (kept.length > 0) {
-            newRecords[type] = kept;
-        }
-    }
-
-    // Adjust IND_MOV flag in block openers (e.g., C001) based on filtered data
-    ['A', 'C', 'D', 'F', 'I', 'M', 'P'].forEach(block => {
-        const openerType = `${block}001`;
-        const originalOpener = allData.records[openerType]?.[0];
-
-        if (originalOpener) {
-            const hasData = Object.keys(newRecords).some(type => type.startsWith(block) && type !== openerType);
-            if (newRecords[openerType]) {
-              newRecords[openerType] = [{ ...newRecords[openerType][0], IND_MOV: hasData ? '0' : '1' }];
-            } else if (allData.records[openerType]) {
-              newRecords[openerType] = [{ ...allData.records[openerType][0], IND_MOV: hasData ? '0' : '1' }];
+                recordsOfType.forEach(r => {
+                    if (r._cnpj === selectedCnpj) {
+                        if (r.COD_ITEM) relevantItemCodes.add(r.COD_ITEM);
+                        if (r.COD_PART) relevantParticipantCodes.add(r.COD_PART);
+                    }
+                });
             }
+
+            const newRecords: { [key: string]: EfdRecord[] } = {};
+
+            // Step 2: Build the new filtered record set.
+            for (const type in allData.records) {
+                const recordsOfType = allData.records[type];
+                if (!recordsOfType || recordsOfType.length === 0) continue;
+
+                let kept: EfdRecord[];
+
+                if (type === '0150') {
+                    kept = recordsOfType.filter(r => relevantParticipantCodes.has(r.COD_PART!));
+                } else if (type === '0200') {
+                    kept = recordsOfType.filter(r => relevantItemCodes.has(r.COD_ITEM!));
+                } else {
+                    // Default behavior: keep records that are for the selected CNPJ, or are truly global (no _cnpj property)
+                    kept = recordsOfType.filter(r => !r.hasOwnProperty('_cnpj') || r._cnpj === selectedCnpj);
+                }
+                
+                if (kept.length > 0) {
+                    newRecords[type] = kept;
+                }
+            }
+
+            // Adjust IND_MOV flag in block openers (e.g., C001) based on filtered data
+            ['A', 'C', 'D', 'F', 'I', 'M', 'P'].forEach(block => {
+                const openerType = `${block}001`;
+                const originalOpener = allData.records[openerType]?.[0];
+
+                if (originalOpener) {
+                    const hasData = Object.keys(newRecords).some(type => type.startsWith(block) && type !== openerType);
+                    if (newRecords[openerType]) {
+                      newRecords[openerType] = [{ ...newRecords[openerType][0], IND_MOV: hasData ? '0' : '1' }];
+                    } else if (allData.records[openerType]) {
+                      newRecords[openerType] = [{ ...allData.records[openerType][0], IND_MOV: hasData ? '0' : '1' }];
+                    }
+                }
+            });
+
+            const newSummaries = await recalculateSummaries(newRecords);
+
+            setData({
+                records: newRecords,
+                ...newSummaries,
+            });
+
+            // Reset view if the current selection is not available in the filtered data
+            if (selectedRecord && !newRecords[selectedRecord]) {
+              setSelectedRecord(null);
+              setActiveView('entradas');
+            }
+        } finally {
+            setIsProcessing(false);
         }
-    });
+    };
 
-    const newSummaries = recalculateSummaries(newRecords);
+    processAndSetData();
 
-    setData({
-        records: newRecords,
-        ...newSummaries,
-    });
-
-    // Reset view if the current selection is not available in the filtered data
-    if (selectedRecord && !newRecords[selectedRecord]) {
-      setSelectedRecord(null);
-      setActiveView('entradas');
-    }
-
-}, [selectedCnpj, allData]);
+}, [selectedCnpj, allData, selectedRecord]);
 
 
-  const handleFileRead = (content: string) => {
-    try {
-      if (!content) {
-        toast({
-          variant: "destructive",
-          title: "Erro ao ler arquivo",
-          description: "O arquivo parece estar vazio.",
-        });
-        return;
-      }
-      const parsedData = parseEfdFile(content);
-      setAllData(parsedData);
-      setData(parsedData);
-      setActiveView('entradas');
-      setSelectedRecord(null);
-      setSelectedCnpj('all');
-    } catch (error) {
-      console.error("Parsing error:", error);
+  const handleFileRead = async (content: string) => {
+    if (!content) {
       toast({
         variant: "destructive",
-        title: "Erro de Análise",
-        description: "Não foi possível analisar o arquivo. Verifique se o formato está correto.",
+        title: "Erro ao ler arquivo",
+        description: "O arquivo parece estar vazio.",
       });
+      return;
     }
+    const parsedData = await parseEfdFile(content);
+    setAllData(parsedData);
+    setData(parsedData);
+    setActiveView('entradas');
+    setSelectedRecord(null);
+    setSelectedCnpj('all');
   };
 
   const handleReset = () => {

@@ -5,7 +5,7 @@ import React, { useCallback, useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 
 interface FileUploaderProps {
-  onFileRead: (content: string) => void;
+  onFileRead: (content: string) => Promise<void>;
   onProcessing: (isProcessing: boolean) => void;
 }
 
@@ -13,7 +13,7 @@ export function FileUploader({ onFileRead, onProcessing }: FileUploaderProps) {
   const [fileName, setFileName] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleFile = useCallback((file: File | null) => {
+  const handleFile = useCallback(async (file: File | null) => {
     if (file) {
       if(file.type !== 'text/plain') {
          toast({
@@ -27,10 +27,20 @@ export function FileUploader({ onFileRead, onProcessing }: FileUploaderProps) {
       onProcessing(true);
       setFileName(file.name);
       const reader = new FileReader();
-      reader.onload = (e) => {
+      reader.onload = async (e) => {
         const text = e.target?.result as string;
-        onFileRead(text);
-        onProcessing(false);
+        try {
+            await onFileRead(text);
+        } catch (error) {
+            console.error("Parsing error:", error);
+            toast({
+                variant: "destructive",
+                title: "Erro de Análise",
+                description: "Não foi possível analisar o arquivo. Verifique se o formato está correto.",
+            });
+        } finally {
+            onProcessing(false);
+        }
       };
       reader.onerror = () => {
         onProcessing(false);

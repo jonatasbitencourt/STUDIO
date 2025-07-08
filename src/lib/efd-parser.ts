@@ -1,6 +1,8 @@
 import type { ParsedEfdData, EfdRecord, TaxSummaryItem, OperationSummaryItem } from './types';
 import { recordHierarchy } from './efd-structure';
 
+const yieldToMain = () => new Promise(resolve => setTimeout(resolve, 0));
+
 const parseNumber = (str: string | undefined): number => {
   if (!str) return 0;
   return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
@@ -167,14 +169,19 @@ function transformConsolidationRecordToTaxSummary(record: EfdRecord): TaxSummary
   return summary;
 }
 
-export function recalculateSummaries(records: { [key: string]: EfdRecord[] }) {
+export async function recalculateSummaries(records: { [key: string]: EfdRecord[] }): Promise<Omit<ParsedEfdData, 'records'>> {
   const operationsSummaryMap = new Map<string, OperationSummaryItem>();
   const c170records = records['C170'] || [];
-  const allC100 = records['C100'] || [];
+  
+  const c100Map = new Map<string, EfdRecord>();
+  (records['C100'] || []).forEach(c100 => {
+    if (c100._id) c100Map.set(c100._id, c100);
+  });
 
-  c170records.forEach(c170 => {
-    if (!c170._parentId) return;
-    const parentC100 = allC100.find(c100 => c100._id === c170._parentId);
+  let processedCount = 0;
+  for (const c170 of c170records) {
+    if (!c170._parentId) continue;
+    const parentC100 = c100Map.get(c170._parentId);
 
     if (parentC100) {
       const cfop = c170.CFOP;
@@ -206,7 +213,12 @@ export function recalculateSummaries(records: { [key: string]: EfdRecord[] }) {
       summary.vlr_pis += parseNumber(c170.VL_PIS);
       summary.vlr_cofins += parseNumber(c170.VL_COFINS);
     }
-  });
+    
+    processedCount++;
+    if (processedCount % 5000 === 0) {
+      await yieldToMain();
+    }
+  }
 
   const operationsSummaryEntradas = Array.from(operationsSummaryMap.values()).filter(s => s.direcao === 'Entrada');
   const operationsSummarySaidas = Array.from(operationsSummaryMap.values()).filter(s => s.direcao === 'Saída');
@@ -224,7 +236,7 @@ export function recalculateSummaries(records: { [key: string]: EfdRecord[] }) {
   };
 }
 
-export const parseEfdFile = (fileContent: string): ParsedEfdData => {
+export const parseEfdFile = async (fileContent: string): Promise<ParsedEfdData> => {
   if (!fileContent.trim()) throw new Error("File content is empty.");
 
   const lines = fileContent.split(/\r?\n/);
@@ -233,7 +245,8 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
   
   const parentStack: EfdRecord[] = [];
   let lastSeenCnpj: string | null = null;
-
+  
+  let lineCount = 0;
   for (const line of lines) {
     if (!line || !line.startsWith('|')) continue;
 
@@ -289,6 +302,11 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
     }
     
     records[regType].push(efdRecord);
+    
+    lineCount++;
+    if (lineCount % 5000 === 0) {
+      await yieldToMain();
+    }
   }
 
   const sortedRecords: { [recordType: string]: EfdRecord[] } = {};
@@ -296,7 +314,7 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
     sortedRecords[key] = records[key];
   });
   
-  const summaries = recalculateSummaries(sortedRecords);
+  const summaries = await recalculateSummaries(sortedRecords);
 
   return {
     records: sortedRecords,
