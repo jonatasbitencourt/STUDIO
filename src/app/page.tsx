@@ -351,7 +351,7 @@ export default function Home() {
                   if (hasChildren) {
                     return (
                       <Collapsible key={recordType} className="w-full">
-                        <SidebarMenuItem className="flex items-center gap-0.5">
+                        <SidebarMenuItem className="flex items-center">
                           <SidebarMenuButton
                             onClick={() => setSelectedRecord(recordType)}
                             isActive={selectedRecord === recordType}
@@ -361,7 +361,7 @@ export default function Home() {
                             <span className="truncate">{`Registro ${recordType}`}</span>
                           </SidebarMenuButton>
                           <CollapsibleTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-full rounded-l-none shadow-neumo active:shadow-neumo-inset data-[state=open]:bg-primary/10">
+                             <Button variant="ghost" className="h-8 w-8 shrink-0 flex items-center justify-center p-0 rounded-l-none shadow-neumo active:shadow-neumo-inset data-[state=open]:bg-primary/10">
                               <ChevronRight className="h-4 w-4 transition-transform data-[state=open]:rotate-90" />
                             </Button>
                           </CollapsibleTrigger>
@@ -456,7 +456,7 @@ export default function Home() {
                 </Button>
                 <Button onClick={handleReset} variant="ghost" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
                   <RefreshCw className="mr-2 h-4 w-4" />
-                  Carregar Outro
+                  Carregar arquivo
                 </Button>
               </div>
             </div>

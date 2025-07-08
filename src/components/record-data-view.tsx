@@ -207,10 +207,12 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
                     onChange={(e) => setFilterInputValue(e.target.value)}
                     className="max-w-sm shadow-neumo-inset"
                 />
-                 <Button onClick={handleAddRow} className="shadow-neumo active:shadow-neumo-inset rounded-xl">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Adicionar
-                </Button>
+                 {!recordType.startsWith('C') && !recordType.startsWith('D') && (
+                    <Button onClick={handleAddRow} className="shadow-neumo active:shadow-neumo-inset rounded-xl">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Adicionar
+                    </Button>
+                 )}
             </div>
         </div>
       </CardHeader>
