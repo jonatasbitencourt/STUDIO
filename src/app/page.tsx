@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
 import type { ParsedEfdData, EfdRecord } from '@/lib/types';
 import { parseEfdFile, recalculateSummaries } from '@/lib/efd-parser';
+import { calculateMBlock } from '@/lib/efd-calculator';
 import { useToast } from "@/hooks/use-toast";
 
 import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator, SidebarFooter } from '@/components/ui/sidebar';
@@ -11,7 +12,7 @@ import { FileUploader } from '@/components/file-uploader';
 import { OperationsSummary } from '@/components/operations-summary';
 import { TaxSummary } from '@/components/tax-summary';
 import { RecordDataView } from '@/components/record-data-view';
-import { Loader2, RefreshCw, Download, ChevronRight } from 'lucide-react';
+import { Loader2, RefreshCw, Download, ChevronRight, Calculator } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { recordHierarchy } from '@/lib/efd-structure';
@@ -23,6 +24,7 @@ export default function Home() {
   const [data, setData] = useState<ParsedEfdData | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
   const [activeView, setActiveView] = useState<'entradas' | 'saidas' | 'apuracao_pis' | 'apuracao_cofins' | 'estabelecimentos' | null>('entradas');
   const [selectedCnpj, setSelectedCnpj] = useState<string>('all');
   const { toast } = useToast();
@@ -204,6 +206,31 @@ export default function Home() {
     // Only update the records part of the state. 
     // The main useEffect will handle recalculating summaries. This makes the UI much more responsive.
     setAllData(prev => prev ? { ...prev, records: newRecords } : null);
+  };
+
+  const handleCalculateApuration = async () => {
+    if (!allData) return;
+    setIsCalculating(true);
+    try {
+        const newRecords = await calculateMBlock(allData.records);
+        setAllData(prev => ({
+            ...prev!,
+            records: newRecords
+        }));
+        toast({
+            title: "Apuração Concluída",
+            description: "Os registros do Bloco M foram recalculados com sucesso.",
+        });
+    } catch (error) {
+        console.error("Calculation error:", error);
+        toast({
+            variant: "destructive",
+            title: "Erro no Cálculo",
+            description: "Não foi possível calcular a apuração.",
+        });
+    } finally {
+        setIsCalculating(false);
+    }
   };
 
   const handleExport = () => {
@@ -435,6 +462,16 @@ export default function Home() {
                  )}
                </div>
                <div className="flex items-center gap-2">
+                 {activeView === 'estabelecimentos' && (
+                    <Button onClick={handleCalculateApuration} disabled={isCalculating} variant="outline" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
+                      {isCalculating ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Calculator className="mr-2 h-4 w-4" />
+                      )}
+                      Calcular Apuração
+                    </Button>
+                  )}
                  {showCnpjFilter && (
                     <Select value={selectedCnpj} onValueChange={setSelectedCnpj}>
                       <SelectTrigger className="w-[280px] shadow-neumo active:shadow-neumo-inset rounded-xl">
