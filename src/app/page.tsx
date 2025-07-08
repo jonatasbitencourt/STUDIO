@@ -31,7 +31,11 @@ export default function Home() {
     if (!allData) return;
 
     if (selectedCnpj === 'all') {
-        setData(allData);
+        const newSummaries = recalculateSummaries(allData.records);
+        setData({
+          records: allData.records,
+          ...newSummaries
+        });
         return;
     }
 
@@ -148,47 +152,32 @@ export default function Home() {
   const handleRecordsUpdate = (updatedRecordList: EfdRecord[], recordType: string) => {
     if (!allData) return;
 
-    // Create a map of the updated records for efficient lookup.
     const updatedRecordsMap = new Map(updatedRecordList.map(r => [r._id, r]));
-
-    // Get the original full list of records for the type from the source of truth.
     const originalRecordList = allData.records[recordType] || [];
 
-    // Create a new full list by merging the changes.
-    // If a record from the original list exists in the updated map, use the updated version.
-    // Otherwise, keep the original record. This preserves records that were filtered out of the view.
     const mergedList = originalRecordList.map(
       originalRecord => updatedRecordsMap.get(originalRecord._id) ?? originalRecord
     );
 
-    // Identify records that were newly added in the UI (they won't be in the original list).
     const addedRecords = updatedRecordList.filter(
       updatedRecord => !originalRecordList.some(originalRecord => originalRecord._id === updatedRecord._id)
     );
 
-    // Combine the merged list with any newly added records.
     const finalUpdatedList = [...mergedList, ...addedRecords];
 
     const newAllDataRecords = {
       ...allData.records,
       [recordType]: finalUpdatedList,
     };
-
-    const newSummaries = recalculateSummaries(newAllDataRecords);
-
-    const newAllData = {
-        records: newAllDataRecords,
-        ...newSummaries,
-    };
     
-    // Update only the single source of truth. The useEffect will propagate changes to the `data` state.
-    setAllData(newAllData);
+    // Only update the records part of the state. 
+    // The main useEffect will handle recalculating summaries. This makes the UI much more responsive.
+    setAllData(prev => prev ? { ...prev, records: newAllDataRecords } : null);
   };
 
   const handleRecordDelete = (recordToDelete: EfdRecord) => {
     if (!allData || !recordToDelete._id) return;
 
-    // Find all children recursively using the _parentId field.
     const idsToDelete = new Set<string>([recordToDelete._id]);
     const queue: string[] = [recordToDelete._id];
     const allRecordsFlat = Object.values(allData.records).flat();
@@ -198,7 +187,6 @@ export default function Home() {
         const children = allRecordsFlat.filter(r => r._parentId === currentParentId);
         for (const child of children) {
             idsToDelete.add(child._id!);
-            // If child can also be a parent, add to queue to find its children
             if (recordHierarchy[child.REG]) {
               queue.push(child._id!);
             }
@@ -212,15 +200,10 @@ export default function Home() {
             newRecords[type] = keptRecords;
         }
     }
-
-    const newSummaries = recalculateSummaries(newRecords);
-
-    const newAllData = {
-        records: newRecords,
-        ...newSummaries,
-    };
     
-    setAllData(newAllData);
+    // Only update the records part of the state. 
+    // The main useEffect will handle recalculating summaries. This makes the UI much more responsive.
+    setAllData(prev => prev ? { ...prev, records: newRecords } : null);
   };
 
   const handleExport = () => {
