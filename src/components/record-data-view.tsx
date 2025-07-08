@@ -153,16 +153,14 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
         return newRecord;
     });
     
-    setInternalRecords(currentRecords => {
-      const updatedRecords = [...newRecords, ...currentRecords];
-      onRecordsUpdate(updatedRecords, recordType);
-      return updatedRecords;
-    });
+    const updatedRecords = [...newRecords, ...internalRecords];
+    onRecordsUpdate(updatedRecords, recordType);
+    setInternalRecords(updatedRecords);
 
     toast({ title: "Sucesso!", description: `${newRecords.length} registro(s) adicionado(s) com sucesso.` });
     setBatchAddText('');
     setIsBatchAddDialogOpen(false);
-  }, [batchAddText, onRecordsUpdate, toast, recordType]);
+  }, [batchAddText, onRecordsUpdate, toast, recordType, internalRecords]);
 
 
   useEffect(() => {
