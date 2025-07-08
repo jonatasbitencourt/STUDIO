@@ -2,11 +2,15 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { EfdRecord } from "@/lib/types";
-import { Info, ChevronLeft, ChevronRight, PlusCircle, Trash2 } from "lucide-react";
+import { Info, ChevronLeft, ChevronRight, PlusCircle, Trash2, ClipboardPaste } from "lucide-react";
 import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+
 
 interface RecordDataViewProps {
   recordType: string;
@@ -62,6 +66,10 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
 
   const [internalRecords, setInternalRecords] = useState(records);
   const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const [isBatchAddDialogOpen, setIsBatchAddDialogOpen] = useState(false);
+  const [batchAddText, setBatchAddText] = useState('');
+  const { toast } = useToast();
 
   useEffect(() => {
     setInternalRecords(records);
@@ -123,6 +131,36 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
         return updatedRecords;
     });
   }, [onRecordsUpdate, recordType, records]);
+
+  const handleBatchAdd = useCallback(() => {
+    const headersToParse = ['IND_ORI_DED', 'VL_DED_PIS', 'VL_DED_COFINS', 'CNPJ', 'INFO_COMPL'];
+    const lines = batchAddText.trim().split('\n').filter(line => line.trim() !== '');
+
+    if (lines.length === 0) {
+        toast({ variant: "destructive", title: "Nenhum dado para adicionar." });
+        return;
+    }
+
+    const newRecords: EfdRecord[] = lines.map((line, idx) => {
+        const fields = line.split('\t');
+        const newRecord: EfdRecord = {
+            REG: 'F700',
+            _id: `new_${Date.now()}_${idx}`
+        };
+        headersToParse.forEach((header, index) => {
+            newRecord[header] = fields[index] || '';
+        });
+        return newRecord;
+    });
+
+    const updatedRecords = [...newRecords, ...records];
+    onRecordsUpdate(updatedRecords);
+
+    toast({ title: "Sucesso!", description: `${newRecords.length} registro(s) adicionado(s) com sucesso.` });
+    setBatchAddText('');
+    setIsBatchAddDialogOpen(false);
+  }, [batchAddText, records, onRecordsUpdate, toast]);
+
 
   useEffect(() => {
     return () => {
@@ -210,6 +248,12 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
                     onChange={(e) => setFilterInputValue(e.target.value)}
                     className="max-w-sm shadow-neumo-inset"
                 />
+                 {recordType === 'F700' && (
+                    <Button onClick={() => setIsBatchAddDialogOpen(true)} className="shadow-neumo active:shadow-neumo-inset rounded-xl">
+                        <ClipboardPaste className="mr-2 h-4 w-4" />
+                        Colar do Excel
+                    </Button>
+                 )}
                  {!recordType.startsWith('C') && !recordType.startsWith('D') && (
                     <Button onClick={handleAddRow} className="shadow-neumo active:shadow-neumo-inset rounded-xl">
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -257,6 +301,26 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
             </Button>
         </div>
       </CardFooter>
+      <Dialog open={isBatchAddDialogOpen} onOpenChange={setIsBatchAddDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+            <DialogTitle>Adicionar Registros F700 em Lote</DialogTitle>
+            <DialogDescription>
+                Copie as colunas do Excel e cole abaixo. As colunas devem estar na ordem: IND_ORI_DED, VL_DED_PIS, VL_DED_COFINS, CNPJ, INFO_COMPL.
+            </DialogDescription>
+            </DialogHeader>
+            <Textarea
+            value={batchAddText}
+            onChange={(e) => setBatchAddText(e.target.value)}
+            placeholder="Cole os dados aqui..."
+            className="min-h-[200px]"
+            />
+            <DialogFooter>
+            <Button onClick={() => setIsBatchAddDialogOpen(false)} variant="outline">Cancelar</Button>
+            <Button onClick={handleBatchAdd}>Adicionar Registros</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
