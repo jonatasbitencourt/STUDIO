@@ -1,4 +1,5 @@
 import type { ParsedEfdData, EfdRecord, TaxSummaryItem, OperationSummaryItem } from './types';
+import { recordHierarchy } from './efd-structure';
 
 const parseNumber = (str: string | undefined): number => {
   if (!str) return 0;
@@ -154,7 +155,7 @@ function transformConsolidationRecordToTaxSummary(record: EfdRecord): TaxSummary
   const headers = RECORD_DEFINITIONS[record.REG] || Object.keys(record);
 
   for (const attribute of headers) {
-    if (attribute === 'REG' || attribute === '_id' || attribute === '_cnpj') continue;
+    if (attribute === 'REG' || attribute === '_id' || attribute === '_cnpj' || attribute === '_parentId') continue;
     const valueStr = record[attribute];
     if (valueStr !== undefined) {
       summary.push({
@@ -168,25 +169,20 @@ function transformConsolidationRecordToTaxSummary(record: EfdRecord): TaxSummary
 
 export function recalculateSummaries(records: { [key: string]: EfdRecord[] }) {
   const operationsSummaryMap = new Map<string, OperationSummaryItem>();
-  const c100records = records['C100'] || [];
   const c170records = records['C170'] || [];
-
-  const c100Map = new Map<string, EfdRecord>();
-  c100records.forEach(c100 => {
-    const key = `${c100.NUM_DOC}-${c100.SER}-${c100.COD_PART}`;
-    c100Map.set(key, c100);
-  });
+  const allC100 = records['C100'] || [];
 
   c170records.forEach(c170 => {
-    const c100Key = `${c170.NUM_DOC_PAI}-${c170.SER_PAI}-${c170.COD_PART_PAI}`;
-    const currentC100 = c100Map.get(c100Key);
-    if (currentC100) {
-       const cfop = c170.CFOP;
+    if (!c170._parentId) return;
+    const parentC100 = allC100.find(c100 => c100._id === c170._parentId);
+
+    if (parentC100) {
+      const cfop = c170.CFOP;
       const cstPis = c170.CST_PIS;
       const cstCofins = c170.CST_COFINS;
       const aliqPis = parseNumber(c170.ALIQ_PIS);
       const aliqCof = parseNumber(c170.ALIQ_COFINS);
-      const indOper = currentC100.IND_OPER;
+      const indOper = parentC100.IND_OPER;
 
       const key = `${indOper}|${cfop}|${cstPis}|${aliqPis}|${cstCofins}|${aliqCof}`;
 
@@ -217,8 +213,8 @@ export function recalculateSummaries(records: { [key: string]: EfdRecord[] }) {
   operationsSummaryEntradas.sort((a, b) => a.cfop.localeCompare(b.cfop));
   operationsSummarySaidas.sort((a, b) => a.cfop.localeCompare(b.cfop));
 
-  const taxSummaryPis = records['M200'] ? transformConsolidationRecordToTaxSummary(records['M200'][0]) : [];
-  const taxSummaryCofins = records['M600'] ? transformConsolidationRecordToTaxSummary(records['M600'][0]) : [];
+  const taxSummaryPis = records['M200'] && records['M200'].length > 0 ? transformConsolidationRecordToTaxSummary(records['M200'][0]) : [];
+  const taxSummaryCofins = records['M600'] && records['M600'].length > 0 ? transformConsolidationRecordToTaxSummary(records['M600'][0]) : [];
 
   return {
     operationsSummaryEntradas,
@@ -234,8 +230,8 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
   const lines = fileContent.split(/\r?\n/);
   const records: { [key: string]: EfdRecord[] } = {};
   let idCounter = 0;
-  let currentC100: EfdRecord | null = null;
   
+  const parentStack: EfdRecord[] = [];
   let lastSeenCnpj: string | null = null;
 
   for (const line of lines) {
@@ -254,47 +250,42 @@ export const parseEfdFile = (fileContent: string): ParsedEfdData => {
       efdRecord[header] = fields[index] || '';
     });
     
-    // Update the last seen CNPJ when we encounter a context-setting record.
-    // These records define the establishment for the subsequent data blocks.
-    if (regType.endsWith('010') && efdRecord.CNPJ) { // e.g., A010, C010, D010...
+    // Manage parent stack to establish parent-child relationships
+    while (parentStack.length > 0) {
+      const currentParent = parentStack[parentStack.length - 1];
+      const parentChildren = recordHierarchy[currentParent.REG] || [];
+      if (parentChildren.includes(regType)) {
+        efdRecord._parentId = currentParent._id;
+        break; 
+      } else {
+        parentStack.pop();
+      }
+    }
+    // Check if the current record is a parent itself
+    if (recordHierarchy[regType]) {
+      parentStack.push(efdRecord);
+    }
+    
+    if (regType.endsWith('010') && efdRecord.CNPJ) { 
       lastSeenCnpj = efdRecord.CNPJ;
     } else if (regType === '0000') {
-      // The 0000 record contains the main CNPJ of the declarant.
       lastSeenCnpj = efdRecord.CNPJ || null;
     }
 
-    // Assign CNPJ to records that are establishment-specific
     const block = regType.charAt(0).toUpperCase();
 
-    // Specific records that have their own CNPJ field
     if (regType === '0140') {
-      // 0140 is the establishment table; it defines itself.
       efdRecord._cnpj = efdRecord.CNPJ;
     } else if (regType === '0500' && efdRecord.CNPJ_EST) {
-      // 0500 is the chart of accounts, which can be per-establishment.
       efdRecord._cnpj = efdRecord.CNPJ_EST;
-    // Records within operational blocks belong to the current establishment context.
-    // Blocks M (PIS/COFINS) and P (Previdenciária) are consolidated and not per-establishment.
     } else if (['A', 'C', 'D', 'F', 'I'].includes(block) && !regType.endsWith('001')) {
-      // Any record in an operational block (A, C, D, etc.), except for the block opener (*001),
-      // belongs to the last establishment defined by a *010 record.
       if (lastSeenCnpj) {
         efdRecord._cnpj = lastSeenCnpj;
       }
     }
-    // Other records, especially in Bloco 0 (e.g., 0150, 0200, 0400), are treated as global.
-    // They will not have a `_cnpj` property and will thus be visible regardless of the filter.
 
     if (!records[regType]) {
       records[regType] = [];
-    }
-    
-    if (regType === 'C100') {
-      currentC100 = efdRecord;
-    } else if (regType === 'C170' && currentC100) {
-      efdRecord['NUM_DOC_PAI'] = currentC100.NUM_DOC;
-      efdRecord['SER_PAI'] = currentC100.SER;
-      efdRecord['COD_PART_PAI'] = currentC100.COD_PART;
     }
     
     records[regType].push(efdRecord);
@@ -334,14 +325,14 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
     for (const recordType of sortedTypesByBlock) {
         if (!records[recordType] || records[recordType].length === 0) continue;
         
-        // Skip empty structural blocks on export
         if (recordType.endsWith('001') && records[recordType][0]?.IND_MOV === '1') {
             const block = recordType.charAt(0);
             const hasDataInBlock = allRecordTypes.some(rt => rt.startsWith(block) && rt !== recordType);
             if (!hasDataInBlock) continue;
         }
 
-        const definition = RECORD_DEFINITIONS[recordType] || Object.keys(records[recordType][0]).filter(h => h !== '_id' && h !== '_cnpj');
+        const definition = RECORD_DEFINITIONS[recordType];
+        if (!definition) continue;
         
         for (const record of records[recordType]) {
             const fields = definition.map(header => record[header] || '');

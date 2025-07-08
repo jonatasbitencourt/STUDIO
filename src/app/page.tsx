@@ -172,6 +172,44 @@ export default function Home() {
       }
   };
 
+  const handleRecordDelete = (recordToDelete: EfdRecord) => {
+    if (!allData || !recordToDelete._id) return;
+
+    // Find all children recursively using the _parentId field.
+    const idsToDelete = new Set<string>([recordToDelete._id]);
+    const queue: string[] = [recordToDelete._id];
+    const allRecordsFlat = Object.values(allData.records).flat();
+
+    while (queue.length > 0) {
+        const currentParentId = queue.shift()!;
+        const children = allRecordsFlat.filter(r => r._parentId === currentParentId);
+        for (const child of children) {
+            idsToDelete.add(child._id!);
+            // If child can also be a parent, add to queue to find its children
+            if (recordHierarchy[child.REG]) {
+              queue.push(child._id!);
+            }
+        }
+    }
+
+    const newRecords: { [key: string]: EfdRecord[] } = {};
+    for (const type in allData.records) {
+        const keptRecords = allData.records[type].filter(r => r._id && !idsToDelete.has(r._id));
+        if (keptRecords.length > 0) {
+            newRecords[type] = keptRecords;
+        }
+    }
+
+    const newSummaries = recalculateSummaries(newRecords);
+
+    const newAllData = {
+        records: newRecords,
+        ...newSummaries,
+    };
+    
+    setAllData(newAllData);
+  };
+
   const handleExport = () => {
     if (!data) {
         toast({
@@ -432,7 +470,8 @@ export default function Home() {
                 key={`${selectedCnpj}-${selectedRecord}`}
                 recordType={selectedRecord}
                 records={data.records[selectedRecord] || []}
-                onUpdate={(updatedRecords) => handleRecordsUpdate(updatedRecords, selectedRecord)}
+                onRecordsUpdate={(updatedRecords) => handleRecordsUpdate(updatedRecords, selectedRecord)}
+                onRecordDelete={handleRecordDelete}
               />
             ) : (
               <>
@@ -441,7 +480,8 @@ export default function Home() {
                       key={`all-data-0140-${selectedCnpj}`}
                       recordType="0140"
                       records={data.records['0140'] || []}
-                      onUpdate={(updatedRecords) => handleRecordsUpdate(updatedRecords, '0140')}
+                      onRecordsUpdate={(updatedRecords) => handleRecordsUpdate(updatedRecords, '0140')}
+                      onRecordDelete={handleRecordDelete}
                    />
                 )}
                 {activeView === 'entradas' && <OperationsSummary data={data.operationsSummaryEntradas} />}

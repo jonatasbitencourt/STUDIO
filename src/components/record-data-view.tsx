@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface RecordDataViewProps {
   recordType: string;
   records: EfdRecord[];
-  onUpdate: (updatedRecords: EfdRecord[]) => void;
+  onRecordsUpdate: (updatedRecords: EfdRecord[]) => void;
+  onRecordDelete: (record: EfdRecord) => void;
 }
 
 const RECORDS_PER_PAGE = 200;
@@ -52,7 +53,7 @@ const MemoizedRow = memo(function MemoizedRow({ record, headers, handleFieldChan
   );
 });
 
-export function RecordDataView({ recordType, records, onUpdate }: RecordDataViewProps) {
+export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordDelete }: RecordDataViewProps) {
   const [currentPage, setCurrentPage] = useState(1);
   const [filterColumn, setFilterColumn] = useState<string>('');
   
@@ -94,20 +95,19 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
         clearTimeout(updateTimeoutRef.current);
       }
       updateTimeoutRef.current = setTimeout(() => {
-        onUpdate(newRecords);
+        onRecordsUpdate(newRecords);
       }, 500);
 
       return newRecords;
     });
-  }, [onUpdate]);
+  }, [onRecordsUpdate]);
 
   const handleDeleteRow = useCallback((recordId: string) => {
-    setInternalRecords(currentRecords => {
-      const updatedRecords = currentRecords.filter(r => r._id !== recordId);
-      onUpdate(updatedRecords);
-      return updatedRecords;
-    });
-  }, [onUpdate]);
+    const recordToDelete = internalRecords.find(r => r._id === recordId);
+    if (recordToDelete) {
+        onRecordDelete(recordToDelete);
+    }
+  }, [internalRecords, onRecordDelete]);
 
   const handleAddRow = useCallback(() => {
     setInternalRecords(currentRecords => {
@@ -115,16 +115,16 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
         const templateRecord = currentRecords.length > 0 ? currentRecords[0] : (records.length > 0 ? records[0] : null);
         if (templateRecord) {
             Object.keys(templateRecord).forEach(header => {
-                if (header !== 'REG' && header !== '_id') {
+                if (header !== 'REG' && header !== '_id' && header !== '_parentId') {
                     newRecord[header] = '';
                 }
             });
         }
         const updatedRecords = [newRecord, ...currentRecords];
-        onUpdate(updatedRecords);
+        onRecordsUpdate(updatedRecords);
         return updatedRecords;
     });
-  }, [onUpdate, recordType, records]);
+  }, [onRecordsUpdate, recordType, records]);
 
   useEffect(() => {
     return () => {
@@ -134,7 +134,7 @@ export function RecordDataView({ recordType, records, onUpdate }: RecordDataView
     };
   }, []);
 
-  const headers = useMemo(() => (records.length > 0 ? Object.keys(records[0]).filter(h => h !== '_id') : []), [records]);
+  const headers = useMemo(() => (records.length > 0 ? Object.keys(records[0]).filter(h => h !== '_id' && h !== '_parentId' && h !== '_cnpj') : []), [records]);
 
   const filteredRecords = useMemo(() => {
     if (!filterValue.trim()) {

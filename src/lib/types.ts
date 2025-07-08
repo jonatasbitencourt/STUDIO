@@ -1,5 +1,6 @@
 export type EfdRecord = {
   _id?: string; // Unique ID for React keys and state management
+  _parentId?: string; // ID of the parent record for hierarchical data
   _cnpj?: string; // Internal property to associate record with a CNPJ
   [key: string]: string;
 };
