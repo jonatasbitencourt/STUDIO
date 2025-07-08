@@ -81,8 +81,6 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
     setFilterValue('');
   }, [recordType]);
 
-  // Use functional updates in useCallback to avoid dependency on `internalRecords`
-  // This stabilizes the function reference and prevents re-renders of all rows.
   const handleFieldChange = useCallback((recordId: string, field: string, value: string) => {
     setInternalRecords(currentRecords => {
       const recordIndex = currentRecords.findIndex(r => r._id === recordId);
@@ -115,7 +113,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
         const templateRecord = currentRecords.length > 0 ? currentRecords[0] : (records.length > 0 ? records[0] : null);
         if (templateRecord) {
             Object.keys(templateRecord).forEach(header => {
-                if (header !== 'REG' && header !== '_id' && header !== '_parentId') {
+                if (header !== 'REG' && header !== '_id' && header !== '_parentId' && header !== '_cnpj') {
                     newRecord[header] = '';
                 }
             });
@@ -140,16 +138,21 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
     if (!filterValue.trim()) {
       return internalRecords;
     }
-    const lowercasedFilter = filterValue.toLowerCase().trim();
+    const lowercasedFilter = filterValue.toLowerCase();
 
     return internalRecords.filter(record => {
       if (filterColumn && filterColumn !== 'all') {
         const cellValue = record[filterColumn] || '';
-        return String(cellValue).toLowerCase().trim() === lowercasedFilter;
+        return String(cellValue).toLowerCase().includes(lowercasedFilter);
       } else {
-        return Object.values(record).some(value =>
-          String(value).toLowerCase().includes(lowercasedFilter)
-        );
+        for (const key in record) {
+            if (key === '_id' || key === '_parentId' || key === '_cnpj') continue;
+            const value = record[key];
+            if (value && String(value).toLowerCase().includes(lowercasedFilter)) {
+                return true;
+            }
+        }
+        return false;
       }
     });
   }, [internalRecords, filterColumn, filterValue]);

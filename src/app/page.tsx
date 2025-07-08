@@ -115,10 +115,10 @@ export default function Home() {
 
     processAndSetData();
 
-}, [selectedCnpj, allData, selectedRecord]);
+}, [selectedCnpj, allData]);
 
 
-  const handleFileRead = async (content: string) => {
+  const handleFileRead = useCallback(async (content: string) => {
     if (!content) {
       toast({
         variant: "destructive",
@@ -133,80 +133,82 @@ export default function Home() {
     setActiveView('entradas');
     setSelectedRecord(null);
     setSelectedCnpj('all');
-  };
+  }, [toast]);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     setAllData(null);
     setData(null);
     setSelectedRecord(null);
     setIsProcessing(false);
     setActiveView('entradas');
     setSelectedCnpj('all');
-  };
+  }, []);
 
-  const handleSelectView = (view: typeof activeView) => {
+  const handleSelectView = useCallback((view: typeof activeView) => {
     setActiveView(view);
     setSelectedRecord(null);
-  };
+  }, []);
   
-  const handleRecordsUpdate = (updatedRecordList: EfdRecord[], recordType: string) => {
-    if (!allData) return;
+  const handleRecordsUpdate = useCallback((updatedRecordList: EfdRecord[], recordType: string) => {
+    setAllData(prevAllData => {
+        if (!prevAllData) return null;
 
-    const updatedRecordsMap = new Map(updatedRecordList.map(r => [r._id, r]));
-    const originalRecordList = allData.records[recordType] || [];
+        const updatedRecordsMap = new Map(updatedRecordList.map(r => [r._id, r]));
+        const originalRecordList = prevAllData.records[recordType] || [];
 
-    const mergedList = originalRecordList.map(
-      originalRecord => updatedRecordsMap.get(originalRecord._id) ?? originalRecord
-    );
+        const mergedList = originalRecordList.map(
+            originalRecord => updatedRecordsMap.get(originalRecord._id) ?? originalRecord
+        );
 
-    const addedRecords = updatedRecordList.filter(
-      updatedRecord => !originalRecordList.some(originalRecord => originalRecord._id === updatedRecord._id)
-    );
+        const addedRecords = updatedRecordList.filter(
+            updatedRecord => !originalRecordList.some(originalRecord => originalRecord._id === updatedRecord._id)
+        );
 
-    const finalUpdatedList = [...mergedList, ...addedRecords];
+        const finalUpdatedList = [...mergedList, ...addedRecords];
 
-    const newAllDataRecords = {
-      ...allData.records,
-      [recordType]: finalUpdatedList,
-    };
+        const newAllDataRecords = {
+            ...prevAllData.records,
+            [recordType]: finalUpdatedList,
+        };
+
+        return { ...prevAllData, records: newAllDataRecords };
+    });
+  }, []);
+
+  const handleRecordDelete = useCallback((recordToDelete: EfdRecord) => {
+    if (!recordToDelete._id) return;
     
-    // Only update the records part of the state. 
-    // The main useEffect will handle recalculating summaries. This makes the UI much more responsive.
-    setAllData(prev => prev ? { ...prev, records: newAllDataRecords } : null);
-  };
+    setAllData(prevAllData => {
+        if (!prevAllData) return null;
 
-  const handleRecordDelete = (recordToDelete: EfdRecord) => {
-    if (!allData || !recordToDelete._id) return;
+        const idsToDelete = new Set<string>([recordToDelete._id!]);
+        const queue: string[] = [recordToDelete._id!];
+        const allRecordsFlat = Object.values(prevAllData.records).flat();
 
-    const idsToDelete = new Set<string>([recordToDelete._id]);
-    const queue: string[] = [recordToDelete._id];
-    const allRecordsFlat = Object.values(allData.records).flat();
-
-    while (queue.length > 0) {
-        const currentParentId = queue.shift()!;
-        const children = allRecordsFlat.filter(r => r._parentId === currentParentId);
-        for (const child of children) {
-            idsToDelete.add(child._id!);
-            if (recordHierarchy[child.REG]) {
-              queue.push(child._id!);
+        while (queue.length > 0) {
+            const currentParentId = queue.shift()!;
+            const children = allRecordsFlat.filter(r => r._parentId === currentParentId);
+            for (const child of children) {
+                idsToDelete.add(child._id!);
+                if (recordHierarchy[child.REG]) {
+                    queue.push(child._id!);
+                }
             }
         }
-    }
 
-    const newRecords: { [key: string]: EfdRecord[] } = {};
-    for (const type in allData.records) {
-        const keptRecords = allData.records[type].filter(r => r._id && !idsToDelete.has(r._id));
-        if (keptRecords.length > 0) {
-            newRecords[type] = keptRecords;
+        const newRecords: { [key: string]: EfdRecord[] } = {};
+        for (const type in prevAllData.records) {
+            const keptRecords = prevAllData.records[type].filter(r => r._id && !idsToDelete.has(r._id));
+            if (keptRecords.length > 0) {
+                newRecords[type] = keptRecords;
+            }
         }
-    }
-    
-    // Only update the records part of the state. 
-    // The main useEffect will handle recalculating summaries. This makes the UI much more responsive.
-    setAllData(prev => prev ? { ...prev, records: newRecords } : null);
-  };
 
-  const handleExport = () => {
+        return { ...prevAllData, records: newRecords };
+    });
+  }, []);
+
+  const handleExport = useCallback(() => {
     if (!data) {
         toast({
             variant: "destructive",
@@ -237,7 +239,7 @@ export default function Home() {
             description: "Não foi possível gerar o arquivo.",
         });
     }
-  };
+  }, [data, selectedCnpj, toast]);
 
   const allRecordTypes = data ? Object.keys(data.records) : [];
   const childRecords = new Set(Object.values(recordHierarchy).flat());
@@ -466,7 +468,7 @@ export default function Home() {
                 key={`${selectedCnpj}-${selectedRecord}`}
                 recordType={selectedRecord}
                 records={data.records[selectedRecord] || []}
-                onRecordsUpdate={(updatedRecords) => handleRecordsUpdate(updatedRecords, selectedRecord)}
+                onRecordsUpdate={handleRecordsUpdate}
                 onRecordDelete={handleRecordDelete}
               />
             ) : (
@@ -477,7 +479,7 @@ export default function Home() {
                       recordType="0140"
                       records={data.records['0140'] || []}
                       onRecordsUpdate={(updatedRecords) => handleRecordsUpdate(updatedRecords, '0140')}
-                      onRecordDelete={handleRecordDelete}
+                      onRecordDelete={(record) => handleRecordDelete(record)}
                    />
                 )}
                 {activeView === 'entradas' && <OperationsSummary data={data.operationsSummaryEntradas} />}
