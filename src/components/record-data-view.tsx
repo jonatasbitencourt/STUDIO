@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 interface RecordDataViewProps {
   recordType: string;
   records: EfdRecord[];
-  onRecordsUpdate: (updatedRecords: EfdRecord[]) => void;
+  onRecordsUpdate: (updatedRecords: EfdRecord[], recordType: string) => void;
   onRecordDelete: (record: EfdRecord) => void;
 }
 
@@ -101,12 +101,12 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
         clearTimeout(updateTimeoutRef.current);
       }
       updateTimeoutRef.current = setTimeout(() => {
-        onRecordsUpdate(newRecords);
+        onRecordsUpdate(newRecords, recordType);
       }, 500);
 
       return newRecords;
     });
-  }, [onRecordsUpdate]);
+  }, [onRecordsUpdate, recordType]);
 
   const handleDeleteRow = useCallback((recordId: string) => {
     const recordToDelete = internalRecords.find(r => r._id === recordId);
@@ -127,7 +127,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
             });
         }
         const updatedRecords = [newRecord, ...currentRecords];
-        onRecordsUpdate(updatedRecords);
+        onRecordsUpdate(updatedRecords, recordType);
         return updatedRecords;
     });
   }, [onRecordsUpdate, recordType, records]);
@@ -144,7 +144,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
     const newRecords: EfdRecord[] = lines.map((line, idx) => {
         const fields = line.split('\t');
         const newRecord: EfdRecord = {
-            REG: 'F700',
+            REG: 'F700', // Hardcoded as this feature is F700-specific
             _id: `new_${Date.now()}_${idx}`
         };
         headersToParse.forEach((header, index) => {
@@ -152,14 +152,17 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
         });
         return newRecord;
     });
-
-    const updatedRecords = [...newRecords, ...records];
-    onRecordsUpdate(updatedRecords);
+    
+    setInternalRecords(currentRecords => {
+      const updatedRecords = [...newRecords, ...currentRecords];
+      onRecordsUpdate(updatedRecords, recordType);
+      return updatedRecords;
+    });
 
     toast({ title: "Sucesso!", description: `${newRecords.length} registro(s) adicionado(s) com sucesso.` });
     setBatchAddText('');
     setIsBatchAddDialogOpen(false);
-  }, [batchAddText, records, onRecordsUpdate, toast]);
+  }, [batchAddText, onRecordsUpdate, toast, recordType]);
 
 
   useEffect(() => {
@@ -170,7 +173,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
     };
   }, []);
 
-  const headers = useMemo(() => (records.length > 0 ? Object.keys(records[0]).filter(h => h !== '_id' && h !== '_parentId' && h !== '_cnpj') : []), [records]);
+  const headers = useMemo(() => (records.length > 0 ? Object.keys(records[0]).filter(h => h !== '_id' && h !== '_parentId' && h !== '_cnpj' && h !== '_order') : []), [records]);
 
   const filteredRecords = useMemo(() => {
     if (!filterValue.trim()) {
@@ -324,5 +327,3 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
     </Card>
   );
 }
-
-    
