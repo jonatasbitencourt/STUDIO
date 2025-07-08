@@ -40,12 +40,12 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   'A990': ['REG', 'QTD_LIN_A'],
   'C001': ['REG', 'IND_MOV'],
   'C010': ['REG', 'CNPJ', 'IND_ESCRI'],
-  'C100': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'NUM_DOC', 'CHV_NFE', 'DT_DOC', 'DT_E_SAI', 'VL_DOC', 'VL_DESC', 'VL_ABAT_NAO_TRIB', 'VL_FRT', 'VL_SEG', 'VL_OUT_DESP', 'VL_BC_ICMS', 'VL_ICMS', 'VL_BC_ICMS_ST', 'VL_ICMS_ST', 'VL_IPI', 'CST_IPI', 'ALIQ_IPI', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'QUANT_BC_PIS', 'ALIQ_PIS_QUANT', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'QUANT_BC_COFINS', 'ALIQ_COFINS_QUANT', 'VL_COFINS', 'COD_CTA', 'COD_CCUS'],
+  'C100': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'NUM_DOC', 'CHV_NFE', 'DT_DOC', 'DT_E_S', 'VL_DOC', 'IND_PGTO', 'VL_DESC', 'VL_ABAT_NT', 'VL_MERC', 'IND_FRT', 'VL_FRT', 'VL_SEG', 'VL_OUT_DA', 'VL_BC_ICMS', 'VL_ICMS', 'VL_BC_ICMS_ST', 'VL_ICMS_ST', 'VL_IPI', 'VL_PIS', 'VL_COFINS', 'VL_PIS_ST', 'VL_COFINS_ST'],
   'C110': ['REG', 'COD_INF', 'TXT_COMPL'],
   'C111': ['REG', 'NUM_PROC', 'IND_PROC'],
   'C120': ['REG', 'COD_DOC_IMP', 'NUM_DOC_IMP', 'CHV_DOC_IMP', 'DT_REG_IMP', 'NUM_ACDRAW'],
-  'C170': ['REG', 'NUM_ITEM', 'COD_ITEM', 'DESCR_COMPL', 'QTD', 'UNID', 'VL_ITEM', 'VL_DESC', 'IND_MOV', 'CST_ICMS', 'CFOP', 'VL_BC_ICMS', 'ALIQ_ICMS', 'VL_ICMS', 'VL_BC_ICMS_ST', 'ALIQ_ICMS_ST', 'VL_ICMS_ST', 'IND_AJ_BC_ICMS', 'VL_IPI', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'QUANT_BC_PIS', 'ALIQ_PIS_QUANT', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'QUANT_BC_COFINS', 'ALIQ_COFINS_QUANT', 'VL_COFINS', 'COD_CTA', 'COD_CCUS'],
-  'C175': ['REG', 'CFOP', 'VL_OPER', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'QUANT_BC_PIS', 'ALIQ_PIS_QUANT', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'QUANT_BC_COFINS', 'ALIQ_COFINS_QUANT', 'VL_COFINS', 'COD_CTA', 'INFO_COMPL'],
+  'C170': ['REG', 'NUM_ITEM', 'COD_ITEM', 'DESCR_COMPL', 'QTD', 'UNID', 'VL_ITEM', 'VL_DESC', 'IND_MOV', 'CST_ICMS', 'CFOP', 'COD_NAT', 'VL_BC_ICMS', 'ALIQ_ICMS', 'VL_ICMS', 'VL_BC_ICMS_ST', 'ALIQ_ICMS_ST', 'VL_ICMS_ST', 'IND_APUR', 'CST_IPI', 'COD_ENQ', 'VL_BC_IPI', 'ALIQ_IPI', 'VL_IPI', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'QUANT_BC_PIS', 'ALIQ_PIS_QUANT', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'QUANT_BC_COFINS', 'ALIQ_COFINS_QUANT', 'VL_COFINS', 'COD_CTA'],
+  'C175': ['REG', 'CFOP', 'VL_OPER', 'VL_DESC', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'QUANT_BC_PIS', 'ALIQ_PIS_QUANT', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'QUANT_BC_COFINS', 'ALIQ_COFINS_QUANT', 'VL_COFINS', 'COD_CTA', 'INFO_COMPL'],
   'C180': ['REG', 'COD_MOD', 'DT_DOC_INI', 'DT_DOC_FIN', 'COD_ITEM', 'COD_NCM', 'EX_IPI', 'VL_TOT_ITEM'],
   'C181': ['REG', 'CST_PIS', 'CFOP', 'VL_ITEM', 'VL_DESC', 'VL_BC_PIS', 'ALIQ_PIS', 'QUANT_BC_PIS', 'ALIQ_PIS_QUANT', 'VL_PIS', 'COD_CTA'],
   'C185': ['REG', 'CST_COFINS', 'CFOP', 'VL_ITEM', 'VL_DESC', 'VL_BC_COFINS', 'ALIQ_COFINS', 'QUANT_BC_COFINS', 'ALIQ_COFINS_QUANT', 'VL_COFINS', 'COD_CTA'],
@@ -200,7 +200,7 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   '1502': ['REG', 'VL_CRED_COFINS_TRIB_MI', 'VL_CRED_COFINS_NT_MI', 'VL_CRED_COFINS_EXP'],
   '1600': ['REG', 'PER_APUR_ANT', 'NAT_CONT_REC', 'VL_CONT_APUR', 'VL_CRED_COFINS_DESC', 'VL_OUT_DED_COFINS', 'VL_COFINS_PAG', 'VL_CONT_EXT', 'VL_MUL', 'VL_JUR', 'DT_RECOL'],
   '1610': ['REG', 'CNPJ', 'CST_COFINS', 'COD_PART', 'DT_OPER', 'VL_OPER', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA', 'DESC_COMPL'],
-  '1620': ['REG', 'PER_APU_CRED', 'ORIG_CRED', 'COD_CRED', 'VL_CRED_DESC'],
+  '1620': ['REG', 'PER_APUR_CRED', 'ORIG_CRED', 'COD_CRED', 'VL_CRED_DESC'],
   '1700': ['REG', 'IND_NAT_RET', 'PR_REC_RET', 'VL_RET_BRT', 'VL_RET_APU', 'VL_RET_DED', 'VL_RET_PER', 'VL_RET_DCOMP', 'SLD_RET'],
   '1800': ['REG', 'INC_IMOB', 'REC_RECEB_RET', 'REC_FIN_RET', 'BC_RET', 'ALIQ_RET', 'VL_REC_UNI', 'DT_REC_UNI', 'COD_REC'],
   '1809': ['REG', 'NUM_PROC', 'IND_PROC'],
@@ -209,84 +209,160 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   '9001': ['REG', 'IND_MOV'],
   '9900': ['REG', 'REG_BLC', 'QTD_REG_BLC'],
   '9990': ['REG', 'QTD_LIN_9'],
-  '9999': ['REG', 'QTD_LIN'],
+  '9999': ['REG', 'QTD_LIN']
 };
 
-function transformConsolidationRecordToTaxSummary(record: EfdRecord): TaxSummaryItem[] {
-  const summary: TaxSummaryItem[] = [];
-  const headers = RECORD_DEFINITIONS[record.REG] || Object.keys(record);
+export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }): string => {
+    let efdText = '';
+    const recordOrder = Object.keys(RECORD_DEFINITIONS).sort((a, b) => {
+        const blockA = a.charAt(0);
+        const blockB = b.charAt(0);
+        const blockOrder = ['0', 'A', 'C', 'D', 'F', 'I', 'M', 'P', '1', '9'];
+        const indexA = blockOrder.indexOf(blockA);
+        const indexB = blockOrder.indexOf(blockB);
+        if (indexA !== indexB) {
+            return indexA - indexB;
+        }
+        return a.localeCompare(b);
+    });
 
-  for (const attribute of headers) {
-    if (attribute === 'REG' || attribute === '_id' || attribute === '_cnpj' || attribute === '_parentId') continue;
-    const valueStr = record[attribute];
-    if (valueStr !== undefined) {
-      summary.push({
-        atributo: attribute,
-        valor: parseNumber(valueStr),
-      });
+    for (const recordType of recordOrder) {
+        if (records[recordType]) {
+            for (const record of records[recordType]) {
+                const line = RECORD_DEFINITIONS[recordType]
+                    .map(field => record[field] || '')
+                    .join('|');
+                efdText += `|${line}|\n`;
+            }
+        }
+    }
+    return efdText;
+};
+
+
+const createRecord = (fields: string[], headers: string[], parentId?: string, cnpj?: string): EfdRecord => {
+  const record: EfdRecord = {
+    _id: self.crypto.randomUUID(),
+    ...(parentId && { _parentId: parentId }),
+    ...(cnpj && { _cnpj: cnpj }),
+  };
+  headers.forEach((header, index) => {
+    record[header] = fields[index] || '';
+  });
+  return record;
+};
+
+
+async function parseRecords(lines: string[], recordTypes: string[], parentId?: string, cnpj?: string) {
+  const records: EfdRecord[] = [];
+  for (const line of lines) {
+    const fields = line.split('|').slice(1, -1);
+    const recordType = fields[0];
+    if (recordTypes.includes(recordType)) {
+      const headers = RECORD_DEFINITIONS[recordType];
+      if (headers) {
+        records.push(createRecord(fields, headers, parentId, cnpj));
+      }
     }
   }
-  return summary;
+  return records;
 }
 
-export async function recalculateSummaries(records: { [key: string]: EfdRecord[] }): Promise<Omit<ParsedEfdData, 'records'>> {
-  const operationsSummaryMap = new Map<string, OperationSummaryItem>();
-  const c170records = records['C170'] || [];
-  
-  const c100Map = new Map<string, EfdRecord>();
-  (records['C100'] || []).forEach(c100 => {
-    if (c100._id) c100Map.set(c100._id, c100);
-  });
+export const recalculateSummaries = async (records: { [key: string]: EfdRecord[] }): Promise<Omit<ParsedEfdData, 'records'>> => {
+  const operationsSummaryEntradas: OperationSummaryItem[] = [];
+  const operationsSummarySaidas: OperationSummaryItem[] = [];
+  const taxSummaryPis: TaxSummaryItem[] = [];
+  const taxSummaryCofins: TaxSummaryItem[] = [];
 
-  let processedCount = 0;
-  for (const c170 of c170records) {
-    if (!c170._parentId) continue;
-    const parentC100 = c100Map.get(c170._parentId);
+  // Summary logic
+  const c170Records = records['C170'] || [];
+  const c100Map = new Map((records['C100'] || []).map(r => [r._id, r]));
 
-    if (parentC100) {
-      const cfop = c170.CFOP;
-      const cstPis = c170.CST_PIS;
-      const cstCofins = c170.CST_COFINS;
-      const aliqPis = parseNumber(c170.ALIQ_PIS);
-      const aliqCof = parseNumber(c170.ALIQ_COFINS);
-      const indOper = parentC100.IND_OPER;
+  const summaryMap: { [key: string]: OperationSummaryItem } = {};
 
-      const key = `${indOper}|${cfop}|${cstPis}|${aliqPis}|${cstCofins}|${aliqCof}`;
+  for (const item of c170Records) {
+    const parentDoc = c100Map.get(item._parentId!);
+    if (!parentDoc) continue;
 
-      if (!operationsSummaryMap.has(key)) {
-        operationsSummaryMap.set(key, {
-          direcao: indOper === '0' ? 'Entrada' : 'Saída',
-          cfop: cfop,
-          cst_pis_cof: `${cstPis}/${cstCofins}`,
-          aliq_pis: aliqPis,
-          aliq_cof: aliqCof,
-          vlr_tot: 0, vlr_icms: 0, vlr_st: 0, vlr_ipi: 0, vlr_bc_pis_cof: 0, vlr_pis: 0, vlr_cofins: 0,
-        });
-      }
-
-      const summary = operationsSummaryMap.get(key)!;
-      summary.vlr_tot += parseNumber(c170.VL_ITEM);
-      summary.vlr_icms += parseNumber(c170.VL_ICMS);
-      summary.vlr_st += parseNumber(c170.VL_ICMS_ST);
-      summary.vlr_ipi += parseNumber(c170.VL_IPI);
-      summary.vlr_bc_pis_cof += parseNumber(c170.VL_BC_PIS);
-      summary.vlr_pis += parseNumber(c170.VL_PIS);
-      summary.vlr_cofins += parseNumber(c170.VL_COFINS);
-    }
+    const direcao = parentDoc.IND_OPER === '0' ? 'ENTRADA' : 'SAIDA';
+    const cfop = item.CFOP || 'N/A';
+    const cstPis = item.CST_PIS || 'N/A';
+    const cstCofins = item.CST_COFINS || 'N/A';
+    const aliqPis = parseNumber(item.ALIQ_PIS);
+    const aliqCofins = parseNumber(item.ALIQ_COFINS);
     
-    processedCount++;
-    if (processedCount % 5000 === 0) {
-      await yieldToMain();
+    const key = `${direcao}-${cfop}-${cstPis}-${cstCofins}-${aliqPis}-${aliqCofins}`;
+
+    if (!summaryMap[key]) {
+      summaryMap[key] = {
+        direcao,
+        cfop,
+        vlr_tot: 0,
+        vlr_icms: 0,
+        vlr_st: 0,
+        vlr_ipi: 0,
+        vlr_pis: 0,
+        vlr_cofins: 0,
+        vlr_bc_pis_cof: 0,
+        cst_pis_cof: `${cstPis}/${cstCofins}`,
+        aliq_pis: aliqPis,
+        aliq_cof: aliqCofins,
+      };
     }
+
+    summaryMap[key].vlr_tot += parseNumber(item.VL_ITEM);
+    summaryMap[key].vlr_icms += parseNumber(item.VL_ICMS);
+    summaryMap[key].vlr_st += parseNumber(item.VL_ICMS_ST);
+    summaryMap[key].vlr_ipi += parseNumber(item.VL_IPI);
+    summaryMap[key].vlr_pis += parseNumber(item.VL_PIS);
+    summaryMap[key].vlr_cofins += parseNumber(item.VL_COFINS);
+    summaryMap[key].vlr_bc_pis_cof += parseNumber(item.VL_BC_PIS) + parseNumber(item.VL_BC_COFINS);
   }
 
-  const operationsSummaryEntradas = Array.from(operationsSummaryMap.values()).filter(s => s.direcao === 'Entrada');
-  const operationsSummarySaidas = Array.from(operationsSummaryMap.values()).filter(s => s.direcao === 'Saída');
-  operationsSummaryEntradas.sort((a, b) => a.cfop.localeCompare(b.cfop));
-  operationsSummarySaidas.sort((a, b) => a.cfop.localeCompare(b.cfop));
+  for (const key in summaryMap) {
+      const summary = summaryMap[key];
+      if (summary.direcao === 'ENTRADA') {
+          operationsSummaryEntradas.push(summary);
+      } else {
+          operationsSummarySaidas.push(summary);
+      }
+  }
 
-  const taxSummaryPis = records['M200'] && records['M200'].length > 0 ? transformConsolidationRecordToTaxSummary(records['M200'][0]) : [];
-  const taxSummaryCofins = records['M600'] && records['M600'].length > 0 ? transformConsolidationRecordToTaxSummary(records['M600'][0]) : [];
+  const m200 = records['M200']?.[0];
+  if (m200) {
+      taxSummaryPis.push(
+          { atributo: 'Total Contribuição Não Cumulativa', valor: parseNumber(m200.VL_TOT_CONT_NC_PER) },
+          { atributo: 'Total Crédito Descontado', valor: parseNumber(m200.VL_TOT_CRED_DESC) },
+          { atributo: 'Total Crédito Descontado Anterior', valor: parseNumber(m200.VL_TOT_CRED_DESC_ANT) },
+          { atributo: 'Total Contribuição Não Cumulativa Devolvida', valor: parseNumber(m200.VL_TOT_CONT_NC_DEV) },
+          { atributo: 'Retenções Não Cumulativas', valor: parseNumber(m200.VL_RET_NC) },
+          { atributo: 'Outras Deduções Não Cumulativas', valor: parseNumber(m200.VL_OUT_DED_NC) },
+          { atributo: 'Contribuição Não Cumulativa a Recolher', valor: parseNumber(m200.VL_CONT_NC_REC) },
+          { atributo: 'Total Contribuição Cumulativa', valor: parseNumber(m200.VL_TOT_CONT_CUM_PER) },
+          { atributo: 'Retenções Cumulativas', valor: parseNumber(m200.VL_RET_CUM) },
+          { atributo: 'Outras Deduções Cumulativas', valor: parseNumber(m200.VL_OUT_DED_CUM) },
+          { atributo: 'Contribuição Cumulativa a Recolher', valor: parseNumber(m200.VL_CONT_CUM_REC) },
+          { atributo: 'Total Contribuição a Recolher', valor: parseNumber(m200.VL_TOT_CONT_REC) }
+      );
+  }
+
+  const m600 = records['M600']?.[0];
+  if (m600) {
+      taxSummaryCofins.push(
+          { atributo: 'Total Contribuição Não Cumulativa', valor: parseNumber(m600.VL_TOT_CONT_NC_PER) },
+          { atributo: 'Total Crédito Descontado', valor: parseNumber(m600.VL_TOT_CRED_DESC) },
+          { atributo: 'Total Crédito Descontado Anterior', valor: parseNumber(m600.VL_TOT_CRED_DESC_ANT) },
+          { atributo: 'Total Contribuição Não Cumulativa Devolvida', valor: parseNumber(m600.VL_TOT_CONT_NC_DEV) },
+          { atributo: 'Retenções Não Cumulativas', valor: parseNumber(m600.VL_RET_NC) },
+          { atributo: 'Outras Deduções Não Cumulativas', valor: parseNumber(m600.VL_OUT_DED_NC) },
+          { atributo: 'Contribuição Não Cumulativa a Recolher', valor: parseNumber(m600.VL_CONT_NC_REC) },
+          { atributo: 'Total Contribuição Cumulativa', valor: parseNumber(m600.VL_TOT_CONT_CUM_PER) },
+          { atributo: 'Retenções Cumulativas', valor: parseNumber(m600.VL_RET_CUM) },
+          { atributo: 'Outras Deduções Cumulativas', valor: parseNumber(m600.VL_OUT_DED_CUM) },
+          { atributo: 'Contribuição Cumulativa a Recolher', valor: parseNumber(m600.VL_CONT_CUM_REC) },
+          { atributo: 'Total Contribuição a Recolher', valor: parseNumber(m600.VL_TOT_CONT_REC) }
+      );
+  }
 
   return {
     operationsSummaryEntradas,
@@ -294,134 +370,61 @@ export async function recalculateSummaries(records: { [key: string]: EfdRecord[]
     taxSummaryPis,
     taxSummaryCofins,
   };
-}
+};
 
-export const parseEfdFile = async (fileContent: string): Promise<ParsedEfdData> => {
-  if (!fileContent.trim()) throw new Error("File content is empty.");
+export const parseEfdFile = async (content: string): Promise<ParsedEfdData> => {
+  const lines = content.split('\n');
+  const allRecords: { [key: string]: EfdRecord[] } = {};
 
-  const lines = fileContent.split(/\r?\n/);
-  const records: { [key: string]: EfdRecord[] } = {};
-  let idCounter = 0;
-  
+  let currentCnpj: string | undefined = undefined;
   const parentStack: EfdRecord[] = [];
-  let lastSeenCnpj: string | null = null;
-  
-  let lineCount = 0;
-  for (const line of lines) {
-    if (!line || !line.startsWith('|')) continue;
 
-    const fields = line.substring(1, line.length - 1).split('|');
-    const regType = fields[0];
-    if (!regType) continue;
-
-    const definition = RECORD_DEFINITIONS[regType];
-    const headers = definition ? [...definition] : fields.map((_, i) => `CAMPO_${i}`);
-    if (definition) headers[0] = 'REG'; else headers[0] = 'REG';
-
-    const efdRecord: EfdRecord = { _id: `id_${idCounter++}` };
-    headers.forEach((header, index) => {
-      efdRecord[header] = fields[index] || '';
-    });
-    
-    // Manage parent stack to establish parent-child relationships
-    while (parentStack.length > 0) {
-      const currentParent = parentStack[parentStack.length - 1];
-      const parentChildren = recordHierarchy[currentParent.REG] || [];
-      if (parentChildren.includes(regType)) {
-        efdRecord._parentId = currentParent._id;
-        break; 
-      } else {
-        parentStack.pop();
-      }
-    }
-    // Check if the current record is a parent itself
-    if (recordHierarchy[regType]) {
-      parentStack.push(efdRecord);
-    }
-    
-    if (regType.endsWith('010') && efdRecord.CNPJ) { 
-      lastSeenCnpj = efdRecord.CNPJ;
-    } else if (regType === '0000') {
-      lastSeenCnpj = efdRecord.CNPJ || null;
-    }
-
-    const block = regType.charAt(0).toUpperCase();
-
-    // Do not associate consolidation blocks (M, P) with a specific CNPJ
-    if (['M', 'P'].includes(block)) {
-        lastSeenCnpj = null;
-    }
-    
-    if (regType === '0140') {
-      efdRecord._cnpj = efdRecord.CNPJ;
-    } else if (regType === '0500' && efdRecord.CNPJ_EST) {
-      efdRecord._cnpj = efdRecord.CNPJ_EST;
-    } else if (['A', 'C', 'D', 'F', 'I'].includes(block) && !regType.endsWith('001')) {
-      if (lastSeenCnpj) {
-        efdRecord._cnpj = lastSeenCnpj;
-      }
-    }
-
-    if (!records[regType]) {
-      records[regType] = [];
-    }
-    
-    records[regType].push(efdRecord);
-    
-    lineCount++;
-    if (lineCount % 5000 === 0) {
+  for (let i = 0; i < lines.length; i++) {
+    if (i % 500 === 0) {
       await yieldToMain();
+    }
+
+    const line = lines[i];
+    if (!line.startsWith('|')) continue;
+
+    const fields = line.split('|').slice(1, -1);
+    if (fields.length === 0) continue;
+
+    const recordType = fields[0];
+    const headers = RECORD_DEFINITIONS[recordType];
+    if (!headers) continue;
+
+    // Manage parent stack for hierarchy
+    while (parentStack.length > 0 && !recordHierarchy[parentStack[parentStack.length - 1].REG]?.includes(recordType)) {
+        parentStack.pop();
+    }
+    const parentId = parentStack.length > 0 ? parentStack[parentStack.length - 1]._id : undefined;
+
+    // Manage CNPJ context for Block 0, A, C, D, F, etc.
+    if (recordType.endsWith('010')) {
+        currentCnpj = fields[1];
+    }
+    
+    // For 0140, which defines establishments, associate its own CNPJ.
+    const recordCnpj = recordType === '0140' ? fields[2] : currentCnpj;
+    
+    const record = createRecord(fields, headers, parentId, recordCnpj);
+
+    if (!allRecords[recordType]) {
+      allRecords[recordType] = [];
+    }
+    allRecords[recordType].push(record);
+    
+    // If this record type can be a parent, push it to the stack
+    if (recordHierarchy[recordType]) {
+        parentStack.push(record);
     }
   }
 
-  const sortedRecords: { [recordType: string]: EfdRecord[] } = {};
-  Object.keys(records).sort().forEach(key => {
-    sortedRecords[key] = records[key];
-  });
-  
-  const summaries = await recalculateSummaries(sortedRecords);
+  const summaries = await recalculateSummaries(allRecords);
 
   return {
-    records: sortedRecords,
-    ...summaries
+    records: allRecords,
+    ...summaries,
   };
-};
-
-export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }): string => {
-    const blockOrder = ['0', 'A', 'C', 'D', 'F', 'M', 'P', 'I', '1', '9'];
-    let text = '';
-
-    const allRecordTypes = Object.keys(records);
-    
-    const sortedTypesByBlock = allRecordTypes.sort((a, b) => {
-        const blockA = a.charAt(0);
-        const blockB = b.charAt(0);
-        const indexA = blockOrder.indexOf(blockA);
-        const indexB = blockOrder.indexOf(blockB);
-
-        if (indexA !== indexB) {
-            return indexA - indexB;
-        }
-        return a.localeCompare(b);
-    });
-
-    for (const recordType of sortedTypesByBlock) {
-        if (!records[recordType] || records[recordType].length === 0) continue;
-        
-        if (recordType.endsWith('001') && records[recordType][0]?.IND_MOV === '1') {
-            const block = recordType.charAt(0);
-            const hasDataInBlock = allRecordTypes.some(rt => rt.startsWith(block) && rt !== recordType);
-            if (!hasDataInBlock) continue;
-        }
-
-        const definition = RECORD_DEFINITIONS[recordType];
-        if (!definition) continue;
-        
-        for (const record of records[recordType]) {
-            const fields = definition.map(header => record[header] || '');
-            text += `|${fields.join('|')}|\n`;
-        }
-    }
-
-    return text;
 };
