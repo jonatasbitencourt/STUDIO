@@ -212,44 +212,122 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   '9999': ['REG', 'QTD_LIN']
 };
 
-export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }): string => {
-    let efdText = '';
-    const recordOrder = Object.keys(RECORD_DEFINITIONS).sort((a, b) => {
-        const blockA = a.charAt(0);
-        const blockB = b.charAt(0);
-        const blockOrder = ['0', 'A', 'C', 'D', 'F', 'I', 'M', 'P', '1', '9'];
-        const indexA = blockOrder.indexOf(blockA);
-        const indexB = blockOrder.indexOf(blockB);
-        if (indexA !== indexB) {
-            return indexA - indexB;
-        }
-        return a.localeCompare(b);
-    });
-
-    for (const recordType of recordOrder) {
-        if (records[recordType]) {
-            for (const record of records[recordType]) {
-                const line = RECORD_DEFINITIONS[recordType]
-                    .map(field => record[field] || '')
-                    .join('|');
-                efdText += `|${line}|\n`;
-            }
-        }
-    }
-    return efdText;
-};
-
-
-const createRecord = (fields: string[], headers: string[], parentId?: string, cnpj?: string): EfdRecord => {
+const createRecord = (fields: string[], headers: string[], parentId?: string, cnpj?: string, order?: number): EfdRecord => {
   const record: EfdRecord = {
     _id: self.crypto.randomUUID(),
     ...(parentId && { _parentId: parentId }),
     ...(cnpj && { _cnpj: cnpj }),
+    ...(order !== undefined && { _order: order }),
   };
   headers.forEach((header, index) => {
     record[header] = fields[index] || '';
   });
   return record;
+};
+
+export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }): string => {
+    // 1. Flatten records and separate those with original order from new ones
+    const recordsWithOrder: EfdRecord[] = [];
+    const recordsWithoutOrder: EfdRecord[] = [];
+    Object.values(records).flat().forEach(r => {
+        if (r._order !== undefined) {
+            recordsWithOrder.push(r);
+        } else {
+            recordsWithoutOrder.push(r);
+        }
+    });
+
+    // 2. Sort records that have an original order
+    recordsWithOrder.sort((a, b) => a._order! - b._order!);
+
+    const finalRecordsList = [...recordsWithOrder];
+
+    // 3. Intelligently insert new records (without order) into the sorted list
+    recordsWithoutOrder.forEach(newRecord => {
+        let insertionIndex = -1;
+        // Find the last record of the same type to insert after
+        for (let i = finalRecordsList.length - 1; i >= 0; i--) {
+            if (finalRecordsList[i].REG === newRecord.REG) {
+                insertionIndex = i + 1;
+                break;
+            }
+        }
+        // If no record of the same type, find the last record of the same block
+        if (insertionIndex === -1) {
+            const block = newRecord.REG.charAt(0);
+            for (let i = finalRecordsList.length - 1; i >= 0; i--) {
+                if (finalRecordsList[i].REG.charAt(0) === block) {
+                    insertionIndex = i + 1;
+                    break;
+                }
+            }
+        }
+        
+        if (insertionIndex !== -1) {
+            finalRecordsList.splice(insertionIndex, 0, newRecord);
+        } else {
+            // Fallback: If the block itself is new, this is complex.
+            // For now, append at a logical point (e.g., before block 9)
+            const lastBlockIndex = finalRecordsList.findIndex(r => r.REG.startsWith('9'));
+            if (lastBlockIndex !== -1) {
+              finalRecordsList.splice(lastBlockIndex, 0, newRecord);
+            } else {
+              finalRecordsList.push(newRecord);
+            }
+        }
+    });
+
+    // 4. Recalculate all counters based on the final, ordered list
+    const blockCounters: { [key: string]: number } = {};
+    const recordTypeCounters: { [key: string]: number } = {};
+
+    for (const record of finalRecordsList) {
+        const block = record.REG.charAt(0);
+        blockCounters[block] = (blockCounters[block] || 0) + 1;
+        recordTypeCounters[record.REG] = (recordTypeCounters[record.REG] || 0) + 1;
+    }
+    
+    // Add count for the closing record itself
+    Object.keys(blockCounters).forEach(block => {
+        if(finalRecordsList.some(r => r.REG === `${block}990`)) {
+            blockCounters[block]++;
+        }
+    })
+    if(finalRecordsList.some(r => r.REG === '9990')) blockCounters['9']++;
+    if(finalRecordsList.some(r => r.REG === '9900')) blockCounters['9']++;
+    if(finalRecordsList.some(r => r.REG === '9001')) blockCounters['9']++;
+    if(finalRecordsList.some(r => r.REG === '9999')) blockCounters['9']++;
+
+
+    const finalRecordsWithCounters = finalRecordsList.map(record => {
+        const newRecord = { ...record };
+        const reg = newRecord.REG;
+
+        if (reg.endsWith('990') && reg.length === 4) {
+            const block = reg.charAt(0);
+            newRecord[`QTD_LIN_${block}`] = String(blockCounters[block] || '0');
+        } else if (reg === '9900') {
+            newRecord.QTD_REG_BLC = String(recordTypeCounters[newRecord.REG_BLC!] || '0');
+        } else if (reg === '9990') {
+            newRecord.QTD_LIN_9 = String(blockCounters['9'] || '0');
+        } else if (reg === '9999') {
+            newRecord.QTD_LIN = String(finalRecordsList.length + 1);
+        }
+        return newRecord;
+    });
+    
+    // 5. Serialize to text
+    let efdText = '';
+    for (const record of finalRecordsWithCounters) {
+        const headers = RECORD_DEFINITIONS[record.REG];
+        if (!headers) continue;
+        const line = headers
+            .map(field => record[field] || '')
+            .join('|');
+        efdText += `|${line}|\n`;
+    }
+    
+    return efdText;
 };
 
 
@@ -408,7 +486,7 @@ export const parseEfdFile = async (content: string): Promise<ParsedEfdData> => {
     // For 0140, which defines establishments, associate its own CNPJ.
     const recordCnpj = recordType === '0140' ? fields[2] : currentCnpj;
     
-    const record = createRecord(fields, headers, parentId, recordCnpj);
+    const record = createRecord(fields, headers, parentId, recordCnpj, i);
 
     if (!allRecords[recordType]) {
       allRecords[recordType] = [];
