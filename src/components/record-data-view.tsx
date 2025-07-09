@@ -39,22 +39,48 @@ const BATCH_ADD_CONFIG: Record<string, { headers: string[] }> = {
     }
 };
 
-// Memoize the Row component to prevent unnecessary re-renders
-const MemoizedRow = memo(function MemoizedRow({ record, headers, handleFieldChange, handleDeleteRow, handleBlur }: {
+// This component manages its own state for editing, preventing re-renders of the entire table on each keystroke.
+const EditableRow = memo(function EditableRow({
+  record,
+  headers,
+  onCommit,
+  onDelete
+}: {
   record: EfdRecord;
   headers: string[];
-  handleFieldChange: (recordId: string, field: string, value: string) => void;
-  handleDeleteRow: (recordId: string) => void;
-  handleBlur: () => void;
+  onCommit: (updatedRecord: EfdRecord) => void;
+  onDelete: (recordId: string) => void;
 }) {
+  const [editedRecord, setEditedRecord] = useState(record);
+  const rowRef = useRef<HTMLTableRowElement>(null);
+
+  // Sync with parent prop changes (e.g., after filtering/sorting)
+  useEffect(() => {
+    setEditedRecord(record);
+  }, [record]);
+
+  const handleInputChange = (field: string, value: string) => {
+    setEditedRecord(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleBlur = () => {
+    // Check if the new focused element is still within the same row.
+    // If it is, we don't commit yet, allowing the user to tab between fields.
+    setTimeout(() => {
+      if (rowRef.current && !rowRef.current.contains(document.activeElement)) {
+        onCommit(editedRecord);
+      }
+    }, 0);
+  };
+
   return (
-    <TableRow>
+    <TableRow ref={rowRef}>
       <TableCell className="p-0 whitespace-nowrap">
         <Button
           variant="ghost"
           size="icon"
           className="h-auto w-auto p-0.5 text-destructive hover:bg-destructive/10"
-          onClick={() => handleDeleteRow(record._id!)}
+          onClick={() => onDelete(record._id!)}
         >
           <Trash2 className="h-3 w-3" />
           <span className="sr-only">Excluir</span>
@@ -62,20 +88,21 @@ const MemoizedRow = memo(function MemoizedRow({ record, headers, handleFieldChan
       </TableCell>
       {headers.map(header => (
         <TableCell key={`${record._id}-${header}`} className="p-0 whitespace-nowrap">
-            <input
-              type="text"
-              value={record[header] || ''}
-              onChange={(e) => handleFieldChange(record._id!, header, e.target.value)}
-              onBlur={handleBlur}
-              style={{ width: `${Math.min(400, Math.max(String(record[header] || '').length, header.length, 10) * 8)}px` }}
-              className="h-auto bg-transparent px-1 py-0.5 text-[8px] border-none rounded-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              disabled={header === 'REG'}
-            />
+          <input
+            type="text"
+            value={editedRecord[header] || ''}
+            onChange={(e) => handleInputChange(header, e.target.value)}
+            onBlur={handleBlur}
+            style={{ width: `${Math.max(String(record[header] || '').length, header.length, 10) * 8 + 15}px` }}
+            className="h-auto bg-transparent px-1 py-0.5 text-[8px] border-none rounded-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            disabled={header === 'REG'}
+          />
         </TableCell>
       ))}
     </TableRow>
   );
 });
+
 
 export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordDelete }: RecordDataViewProps) {
   const [currentPage, setCurrentPage] = useState(1);
@@ -84,21 +111,11 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
   const [filterInputValue, setFilterInputValue] = useState('');
   const [filterValue, setFilterValue] = useState('');
 
-  const [internalRecords, setInternalRecords] = useState(records);
   const [isBatchAddDialogOpen, setIsBatchAddDialogOpen] = useState(false);
   const [batchAddText, setBatchAddText] = useState('');
   const { toast } = useToast();
   
   const canBatchAdd = BATCH_ADD_CONFIG.hasOwnProperty(recordType);
-
-  const internalRecordsRef = useRef(internalRecords);
-  useEffect(() => {
-    internalRecordsRef.current = internalRecords;
-  }, [internalRecords]);
-
-  useEffect(() => {
-    setInternalRecords(records);
-  }, [records]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -109,33 +126,42 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
 
   useEffect(() => {
     setCurrentPage(1);
+  }, [filterColumn, filterValue]);
+  
+  useEffect(() => {
+    setCurrentPage(1);
     setFilterColumn('');
     setFilterInputValue('');
     setFilterValue('');
-  }, [recordType]);
+  }, [recordType, records]); // Reset filters if recordType or base records change
 
-  const handleFieldChange = useCallback((recordId: string, field: string, value: string) => {
-    setInternalRecords(currentRecords =>
-      currentRecords.map(r =>
-        r._id === recordId ? { ...r, [field]: value } : r
-      )
-    );
-  }, []);
 
-  const handleBlur = useCallback(() => {
-    onRecordsUpdate(internalRecordsRef.current, recordType);
-  }, [onRecordsUpdate, recordType]);
+  const handleRowCommit = useCallback((updatedRecord: EfdRecord) => {
+      // Find the index of the record to update
+      const recordIndex = records.findIndex(r => r._id === updatedRecord._id);
+      if (recordIndex === -1) { // This is a new record
+          onRecordsUpdate([updatedRecord, ...records], recordType);
+          return;
+      }
+
+      // Create a new list with the updated record
+      const updatedList = [...records];
+      updatedList[recordIndex] = updatedRecord;
+
+      // Pass the entire updated list to the parent
+      onRecordsUpdate(updatedList, recordType);
+  }, [records, onRecordsUpdate, recordType]);
 
   const handleDeleteRow = useCallback((recordId: string) => {
-    const recordToDelete = internalRecords.find(r => r._id === recordId);
+    const recordToDelete = records.find(r => r._id === recordId);
     if (recordToDelete) {
         onRecordDelete(recordToDelete);
     }
-  }, [internalRecords, onRecordDelete]);
+  }, [records, onRecordDelete]);
 
   const handleAddRow = useCallback(() => {
     const newRecord: EfdRecord = { REG: recordType, _id: `new_${Date.now()}` };
-    const templateRecord = internalRecords.length > 0 ? internalRecords[0] : (records.length > 0 ? records[0] : null);
+    const templateRecord = records.length > 0 ? records[0] : null;
     
     if (templateRecord) {
         Object.keys(templateRecord).forEach(header => {
@@ -145,10 +171,9 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
         });
     }
 
-    const updatedRecords = [newRecord, ...internalRecords];
-    setInternalRecords(updatedRecords);
+    const updatedRecords = [newRecord, ...records];
     onRecordsUpdate(updatedRecords, recordType);
-  }, [internalRecords, onRecordsUpdate, recordType, records]);
+  }, [records, onRecordsUpdate, recordType]);
 
 
    const handleBatchAdd = useCallback(() => {
@@ -175,14 +200,13 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
         return newRecord;
     });
 
-    const updatedRecordList = [...newRecords, ...internalRecords];
-    setInternalRecords(updatedRecordList);
+    const updatedRecordList = [...newRecords, ...records];
     onRecordsUpdate(updatedRecordList, recordType);
 
     toast({ title: "Sucesso!", description: `${newRecords.length} registro(s) adicionado(s) com sucesso.` });
     setBatchAddText('');
     setIsBatchAddDialogOpen(false);
-  }, [batchAddText, recordType, internalRecords, onRecordsUpdate, toast]);
+  }, [batchAddText, recordType, records, onRecordsUpdate, toast]);
 
 
 
@@ -190,11 +214,11 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
 
   const filteredRecords = useMemo(() => {
     if (!filterValue.trim()) {
-      return internalRecords;
+      return records;
     }
     const lowercasedFilter = filterValue.toLowerCase();
 
-    return internalRecords.filter(record => {
+    return records.filter(record => {
       if (filterColumn && filterColumn !== 'all') {
         const cellValue = record[filterColumn] || '';
         return String(cellValue).toLowerCase().includes(lowercasedFilter);
@@ -209,11 +233,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
         return false;
       }
     });
-  }, [internalRecords, filterColumn, filterValue]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filterColumn, filterValue]);
+  }, [records, filterColumn, filterValue]);
 
   const totalPages = Math.ceil(filteredRecords.length / RECORDS_PER_PAGE);
   const paginatedRecords = useMemo(() => filteredRecords.slice(
@@ -224,13 +244,22 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
   const handlePrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
   const handleNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
 
-  if (!recordType || records.length === 0) {
+  if (!recordType || records.length === 0 && paginatedRecords.length === 0) {
+    const showAddButton = !recordType.startsWith('0') && !recordType.startsWith('A') && !recordType.startsWith('C') && !recordType.startsWith('D');
     return (
       <Card className="shadow-neumo border-none rounded-2xl h-[400px] flex items-center justify-center">
-        <div className="text-center text-muted-foreground space-y-2">
+        <div className="text-center text-muted-foreground space-y-4">
             <Info className="mx-auto h-10 w-10"/>
-            <p className="font-semibold">Nenhum registro encontrado para {recordType}</p>
-            <p className="text-sm">Carregue um arquivo para visualizar os dados.</p>
+            <div>
+              <p className="font-semibold">Nenhum registro encontrado para {recordType}</p>
+              <p className="text-sm">Carregue um arquivo para visualizar os dados.</p>
+            </div>
+             {showAddButton && (
+                <Button onClick={handleAddRow} className="shadow-neumo active:shadow-neumo-inset rounded-xl">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Adicionar Primeiro Registro
+                </Button>
+             )}
         </div>
       </Card>
     );
@@ -292,13 +321,12 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
               </TableHeader>
               <TableBody>
                 {paginatedRecords.map((record) => (
-                  <MemoizedRow
+                  <EditableRow
                     key={record._id}
                     record={record}
                     headers={headers}
-                    handleFieldChange={handleFieldChange}
-                    handleDeleteRow={handleDeleteRow}
-                    handleBlur={handleBlur}
+                    onCommit={handleRowCommit}
+                    onDelete={handleDeleteRow}
                   />
                 ))}
               </TableBody>
