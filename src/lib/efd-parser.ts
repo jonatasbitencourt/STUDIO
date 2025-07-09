@@ -226,10 +226,9 @@ const createRecord = (fields: string[], headers: string[], parentId?: string, cn
 };
 
 export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }): string => {
-    const finalRecordsList: EfdRecord[] = [];
     const blockOrder = ['0', 'A', 'C', 'D', 'F', 'I', 'M', 'P', '1', '9'];
 
-    // 1. Reorder all records based on block and original _order
+    // 1. Get a flat, ordered list of all records that will be in the final file.
     const allRecordsFlat = Object.values(records).flat();
     allRecordsFlat.sort((a, b) => {
         const blockA = a.REG.charAt(0);
@@ -243,49 +242,49 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
         return (a._order ?? Infinity) - (b._order ?? Infinity);
     });
 
-    // 2. Recalculate all counters based on the final, ordered list.
+    // 2. Calculate final counts based on this definitive list.
     const blockCounters: { [key: string]: number } = {};
     const recordTypeCounters: { [key: string]: number } = {};
 
-    // Single pass to count all records and their types.
     for (const record of allRecordsFlat) {
         const block = record.REG.charAt(0);
-        
-        // Initialize counters if they don't exist
         if (!blockCounters[block]) blockCounters[block] = 0;
-        if (!recordTypeCounters[record.REG]) recordTypeCounters[record.REG] = 0;
-
         blockCounters[block]++;
+
+        if (!recordTypeCounters[record.REG]) recordTypeCounters[record.REG] = 0;
         recordTypeCounters[record.REG]++;
     }
 
-    // Include the closing records in the block count
-    ['0', 'A', 'C', 'D', 'F', 'I', 'M', 'P', '1', '9'].forEach(block => {
-        if (blockCounters[block] > 0) {
-            blockCounters[block]++; // For the *990 record
-        }
-    });
-     // The 9 block also has 9001
-    if (blockCounters['9'] > 0) {
-        blockCounters['9']++;
-    }
+    // 3. Create the final list of records with updated counter values.
+    const finalRecordsList: EfdRecord[] = [];
+    const totalLines = allRecordsFlat.length;
 
-
-    // 3. Now, create the final records list with the correct counters.
     for (const record of allRecordsFlat) {
         const newRecord = { ...record };
         const reg = newRecord.REG;
 
+        // Update block totalizers (*990)
         if (reg.endsWith('990') && reg.length === 4) {
             const block = reg.charAt(0);
             newRecord[`QTD_LIN_${block}`] = String(blockCounters[block] || 0);
-        } else if (reg === '9900') {
-            newRecord.QTD_REG_BLC = String(recordTypeCounters[newRecord.REG_BLC!] || '0');
-        } else if (reg === '9990') {
-            newRecord.QTD_LIN_9 = String(blockCounters['9'] || 0);
-        } else if (reg === '9999') {
-            newRecord.QTD_LIN = String(allRecordsFlat.length + 1); // +1 for 9999 itself
         }
+        
+        // Update record type totalizers (9900)
+        if (reg === '9900') {
+            const recordTypeToCount = newRecord.REG_BLC!;
+            newRecord.QTD_REG_BLC = String(recordTypeCounters[recordTypeToCount] || '0');
+        }
+
+        // Update block 9 totalizer (9990)
+        if (reg === '9990') {
+            newRecord.QTD_LIN_9 = String(blockCounters['9'] || 0);
+        }
+        
+        // Update file totalizer (9999)
+        if (reg === '9999') {
+            newRecord.QTD_LIN = String(totalLines);
+        }
+
         finalRecordsList.push(newRecord);
     }
     
@@ -304,10 +303,10 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
     
-    const C001 = records['0000']?.[0];
-    const cnpj = C001?.CNPJ || 'CNPJ_NAO_ENCONTRADO';
-    const dt_ini = C001?.DT_INI || 'DATA_INI';
-    const dt_fin = C001?.DT_FIN || 'DATA_FIN';
+    const record0000 = records['0000']?.[0];
+    const cnpj = record0000?.CNPJ || 'CNPJ_NAO_ENCONTRADO';
+    const dt_ini = record0000?.DT_INI || 'DATA_INI';
+    const dt_fin = record0000?.DT_FIN || 'DATA_FIN';
     
     link.download = `EFD_CONTRIBUICOES_${cnpj}_${dt_ini}_${dt_fin}.txt`;
     
