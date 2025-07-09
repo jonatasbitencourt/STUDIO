@@ -40,11 +40,12 @@ const BATCH_ADD_CONFIG: Record<string, { headers: string[] }> = {
 };
 
 // Memoize the Row component to prevent unnecessary re-renders
-const MemoizedRow = memo(function MemoizedRow({ record, headers, handleFieldChange, handleDeleteRow }: {
+const MemoizedRow = memo(function MemoizedRow({ record, headers, handleFieldChange, handleDeleteRow, handleBlur }: {
   record: EfdRecord;
   headers: string[];
   handleFieldChange: (recordId: string, field: string, value: string) => void;
   handleDeleteRow: (recordId: string) => void;
+  handleBlur: () => void;
 }) {
   return (
     <TableRow>
@@ -65,6 +66,7 @@ const MemoizedRow = memo(function MemoizedRow({ record, headers, handleFieldChan
               type="text"
               value={record[header] || ''}
               onChange={(e) => handleFieldChange(record._id!, header, e.target.value)}
+              onBlur={handleBlur}
               style={{ width: `${Math.min(400, Math.max(String(record[header] || '').length, header.length, 10) * 8)}px` }}
               className="h-auto bg-transparent px-1 py-0.5 text-[8px] border-none rounded-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               disabled={header === 'REG'}
@@ -83,13 +85,16 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
   const [filterValue, setFilterValue] = useState('');
 
   const [internalRecords, setInternalRecords] = useState(records);
-  const updateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   const [isBatchAddDialogOpen, setIsBatchAddDialogOpen] = useState(false);
   const [batchAddText, setBatchAddText] = useState('');
   const { toast } = useToast();
   
   const canBatchAdd = BATCH_ADD_CONFIG.hasOwnProperty(recordType);
+
+  const internalRecordsRef = useRef(internalRecords);
+  useEffect(() => {
+    internalRecordsRef.current = internalRecords;
+  }, [internalRecords]);
 
   useEffect(() => {
     setInternalRecords(records);
@@ -110,22 +115,15 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
   }, [recordType]);
 
   const handleFieldChange = useCallback((recordId: string, field: string, value: string) => {
-    setInternalRecords(currentRecords => {
-      const recordIndex = currentRecords.findIndex(r => r._id === recordId);
-      if (recordIndex === -1) return currentRecords;
+    setInternalRecords(currentRecords =>
+      currentRecords.map(r =>
+        r._id === recordId ? { ...r, [field]: value } : r
+      )
+    );
+  }, []);
 
-      const newRecords = [...currentRecords]; // Create a new array for immutability
-      newRecords[recordIndex] = { ...newRecords[recordIndex], [field]: value };
-      
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
-      }
-      updateTimeoutRef.current = setTimeout(() => {
-        onRecordsUpdate(newRecords, recordType);
-      }, 500);
-
-      return newRecords;
-    });
+  const handleBlur = useCallback(() => {
+    onRecordsUpdate(internalRecordsRef.current, recordType);
   }, [onRecordsUpdate, recordType]);
 
   const handleDeleteRow = useCallback((recordId: string) => {
@@ -187,14 +185,6 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
   }, [batchAddText, recordType, internalRecords, onRecordsUpdate, toast]);
 
 
-
-  useEffect(() => {
-    return () => {
-      if (updateTimeoutRef.current) {
-        clearTimeout(updateTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const headers = useMemo(() => (records.length > 0 ? Object.keys(records[0]).filter(h => h !== '_id' && h !== '_parentId' && h !== '_cnpj' && h !== '_order') : []), [records]);
 
@@ -308,6 +298,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
                     headers={headers}
                     handleFieldChange={handleFieldChange}
                     handleDeleteRow={handleDeleteRow}
+                    handleBlur={handleBlur}
                   />
                 ))}
               </TableBody>
