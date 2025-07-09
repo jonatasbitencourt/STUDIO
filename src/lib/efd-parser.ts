@@ -117,7 +117,7 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   'F130': ['REG', 'NAT_BC_CRED', 'IDENT_BEM_IMOB', 'IND_ORIG_CRED', 'IND_UTIL_BEM_IMOB', 'MES_AQUIS', 'VL_AQUIS_BEM', 'VL_EXC_BC', 'IND_NR_PARC', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA', 'COD_CCUS', 'DESCR_BEM'],
   'F139': ['REG', 'NUM_PROC', 'IND_PROC'],
   'F150': ['REG', 'NAT_BC_CRED', 'VL_TOT_EST', 'VL_EXC_BC_EST', 'VL_BC_EST', 'VL_BC_EST_MES', 'CST_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'DESC_EST', 'COD_CTA'],
-  'F200': ['REG', 'UNID_IMOB', 'TP_UNID_IMOB', 'IDENT_EMP', 'DESC_UNID_IMOB', 'NUM_CONT', 'CPF_CNPJ_ADQU', 'DT_OPER_COMP', 'VL_UNID_IMOB_AT', 'VL_TOT_REC', 'VL_REC_ACUM', 'VL_COMP_AJUS_UNID', 'COD_ITEM', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'IND_NAT_EMP', 'INF_COMP'],
+  'F200': ['REG', 'UNID_IMOB', 'TP_UNID_IMOB', 'IDENT_EMP', 'DESC_UNID_IMOB', 'NUM_CONT', 'CPF_CNPJ_ADQU', 'DT_OPER_COMP', 'VL_UNID_IMOB_AT', 'VL_TOT_REC', 'VL_REC_ACUM', 'VL_COMP_AJUS_UNID', 'COD_ITEM', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'IND_NAT_EMP', 'INF_COMPL'],
   'F205': ['REG', 'COD_UNID_IMOB', 'VL_CUSTO_INC_MES', 'VL_CUSTO_INC_ACUM', 'VL_EXC_BC', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA'],
   'F210': ['REG', 'COD_UNID_IMOB', 'VL_CUSTO_ORC', 'VL_CUSTO_ORC_PER', 'VL_EXC_BC', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA'],
   'F211': ['REG', 'NUM_PROC', 'IND_PROC'],
@@ -277,45 +277,39 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
         }
     });
 
-    // 4. Recalculate all counters based on the final, ordered list
+    // 4. Recalculate all counters based on the final, ordered list.
+    // This is a direct and correct approach.
     const blockCounters: { [key: string]: number } = {};
     const recordTypeCounters: { [key: string]: number } = {};
 
-    // First pass: count all records
+    // Single pass to count all records and their types.
     for (const record of finalRecordsList) {
         const block = record.REG.charAt(0);
-        // Initialize if not present
-        if (!blockCounters[block]) blockCounters[block] = 0;
-        if (!recordTypeCounters[record.REG]) recordTypeCounters[record.REG] = 0;
         
+        if (!blockCounters[block]) blockCounters[block] = 0;
         blockCounters[block]++;
+        
+        if (!recordTypeCounters[record.REG]) recordTypeCounters[record.REG] = 0;
         recordTypeCounters[record.REG]++;
     }
 
-    // Add counts for closing records themselves, which are also part of the list
-    Object.keys(blockCounters).forEach(block => {
-        const closingRecordType = `${block}990`;
-        if (recordTypeCounters[closingRecordType]) {
-            blockCounters[block]++;
-        }
-    });
-    if (recordTypeCounters['9900']) blockCounters['9'] += recordTypeCounters['9900'];
-    if (recordTypeCounters['9990']) blockCounters['9']++;
-    if (recordTypeCounters['9999']) blockCounters['9']++;
-    if (recordTypeCounters['9001']) blockCounters['9']++;
-    
+    // Now, create the final records list with the correct counters.
     const finalRecordsWithCounters = finalRecordsList.map(record => {
         const newRecord = { ...record };
         const reg = newRecord.REG;
 
         if (reg.endsWith('990') && reg.length === 4) {
             const block = reg.charAt(0);
+            // The count for the block is the value from the counter.
             newRecord[`QTD_LIN_${block}`] = String(blockCounters[block] || 0);
         } else if (reg === '9900') {
+            // The count for a specific record type.
             newRecord.QTD_REG_BLC = String(recordTypeCounters[newRecord.REG_BLC!] || '0');
         } else if (reg === '9990') {
+            // The count for block 9.
             newRecord.QTD_LIN_9 = String(blockCounters['9'] || 0);
         } else if (reg === '9999') {
+            // The total number of lines in the file.
             newRecord.QTD_LIN = String(finalRecordsList.length);
         }
         return newRecord;
