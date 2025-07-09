@@ -21,6 +21,24 @@ interface RecordDataViewProps {
 
 const RECORDS_PER_PAGE = 200;
 
+const BATCH_ADD_CONFIG: Record<string, { headers: string[] }> = {
+    'F700': {
+        headers: ['IND_ORI_DED', 'IND_NAT_DED', 'VL_DED_PIS', 'VL_DED_COFINS', 'VL_BC_OPER', 'CNPJ', 'INFO_COMPL']
+    },
+    'M110': {
+        headers: ['IND_AJ', 'VL_AJ', 'COD_AJ', 'NUM_DOC', 'DESCR_AJ', 'DT_REF']
+    },
+    'M115': {
+        headers: ['DET_VALOR_AJ', 'CST_PIS', 'DET_BC_CRED', 'DET_ALIQ', 'DT_OPER_AJ', 'DESC_AJ', 'COD_CTA', 'INFO_COMPL']
+    },
+    'M510': {
+        headers: ['IND_AJ', 'VL_AJ', 'COD_AJ', 'NUM_DOC', 'DESCR_AJ', 'DT_REF']
+    },
+    'M515': {
+        headers: ['DET_VALOR_AJ', 'CST_COFINS', 'DET_BC_CRED', 'DET_ALIQ', 'DT_OPER_AJ', 'DESC_AJ', 'COD_CTA', 'INFO_COMPL']
+    }
+};
+
 // Memoize the Row component to prevent unnecessary re-renders
 const MemoizedRow = memo(function MemoizedRow({ record, headers, handleFieldChange, handleDeleteRow }: {
   record: EfdRecord;
@@ -70,6 +88,8 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
   const [isBatchAddDialogOpen, setIsBatchAddDialogOpen] = useState(false);
   const [batchAddText, setBatchAddText] = useState('');
   const { toast } = useToast();
+  
+  const canBatchAdd = BATCH_ADD_CONFIG.hasOwnProperty(recordType);
 
   useEffect(() => {
     setInternalRecords(records);
@@ -134,7 +154,10 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
 
 
    const handleBatchAdd = useCallback(() => {
-    const headersToParse = ['IND_ORI_DED', 'IND_NAT_DED', 'VL_DED_PIS', 'VL_DED_COFINS', 'VL_BC_OPER', 'CNPJ', 'INFO_COMPL'];
+    const config = BATCH_ADD_CONFIG[recordType];
+    if (!config) return;
+
+    const { headers: headersToParse } = config;
     const lines = batchAddText.trim().split('\n').filter(line => line.trim() !== '');
 
     if (lines.length === 0) {
@@ -145,7 +168,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
     const newRecords: EfdRecord[] = lines.map((line, idx) => {
         const fields = line.split('\t');
         const newRecord: EfdRecord = {
-            REG: 'F700', // Hardcoded as this feature is F700-specific
+            REG: recordType,
             _id: `new_${Date.now()}_${idx}`
         };
         headersToParse.forEach((header, index) => {
@@ -154,15 +177,14 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
         return newRecord;
     });
 
-    const updatedRecords = [...newRecords, ...internalRecords];
-    
-    setInternalRecords(updatedRecords);
-    onRecordsUpdate(updatedRecords, recordType);
+    const updatedRecordList = [...newRecords, ...internalRecords];
+    setInternalRecords(updatedRecordList);
+    onRecordsUpdate(updatedRecordList, recordType);
 
     toast({ title: "Sucesso!", description: `${newRecords.length} registro(s) adicionado(s) com sucesso.` });
     setBatchAddText('');
     setIsBatchAddDialogOpen(false);
-  }, [batchAddText, onRecordsUpdate, toast, recordType, internalRecords]);
+  }, [batchAddText, recordType, internalRecords, onRecordsUpdate, toast]);
 
 
 
@@ -252,7 +274,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
                     onChange={(e) => setFilterInputValue(e.target.value)}
                     className="max-w-sm shadow-neumo-inset"
                 />
-                 {recordType === 'F700' && (
+                 {canBatchAdd && (
                     <Button onClick={() => setIsBatchAddDialogOpen(true)} className="shadow-neumo active:shadow-neumo-inset rounded-xl">
                         <ClipboardPaste className="mr-2 h-4 w-4" />
                         Colar do Excel
@@ -308,9 +330,9 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
       <Dialog open={isBatchAddDialogOpen} onOpenChange={setIsBatchAddDialogOpen}>
         <DialogContent className="sm:max-w-md">
             <DialogHeader>
-            <DialogTitle>Adicionar Registros F700 em Lote</DialogTitle>
+            <DialogTitle>Adicionar Registros {recordType} em Lote</DialogTitle>
             <DialogDescription>
-                Copie as colunas do Excel e cole abaixo. As colunas devem estar na ordem: IND_ORI_DED, IND_NAT_DED, VL_DED_PIS, VL_DED_COFINS, VL_BC_OPER, CNPJ, INFO_COMPL.
+                Copie as colunas do Excel e cole abaixo. As colunas devem estar na ordem: {BATCH_ADD_CONFIG[recordType]?.headers.join(', ')}.
             </DialogDescription>
             </DialogHeader>
             <Textarea
