@@ -51,7 +51,7 @@ export function FileUploader({ onFileRead, onProcessing }: FileUploaderProps) {
         });
         console.error("Failed to read file");
       }
-      reader.readAsText(file);
+      reader.readAsText(file, 'windows-1252');
     }
   }, [onFileRead, onProcessing, toast]);
 

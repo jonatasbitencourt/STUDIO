@@ -47,7 +47,7 @@ const MemoizedRow = memo(function MemoizedRow({ record, headers, handleFieldChan
               type="text"
               value={record[header] || ''}
               onChange={(e) => handleFieldChange(record._id!, header, e.target.value)}
-              style={{ width: `${Math.min(400, Math.max(String(record[header] || '').length, header.length, 10) * 5)}px` }}
+              style={{ width: `${Math.min(400, Math.max(String(record[header] || '').length, header.length, 10) * 8)}px` }}
               className="h-auto bg-transparent px-1 py-0.5 text-[8px] border-none rounded-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               disabled={header === 'REG'}
             />
@@ -116,21 +116,22 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
   }, [internalRecords, onRecordDelete]);
 
   const handleAddRow = useCallback(() => {
-    setInternalRecords(currentRecords => {
-        const newRecord: EfdRecord = { REG: recordType, _id: `new_${Date.now()}` };
-        const templateRecord = currentRecords.length > 0 ? currentRecords[0] : (records.length > 0 ? records[0] : null);
-        if (templateRecord) {
-            Object.keys(templateRecord).forEach(header => {
-                if (header !== 'REG' && header !== '_id' && header !== '_parentId' && header !== '_cnpj') {
-                    newRecord[header] = '';
-                }
-            });
-        }
-        const updatedRecords = [newRecord, ...currentRecords];
-        onRecordsUpdate(updatedRecords, recordType);
-        return updatedRecords;
-    });
-  }, [onRecordsUpdate, recordType, records]);
+    const newRecord: EfdRecord = { REG: recordType, _id: `new_${Date.now()}` };
+    const templateRecord = internalRecords.length > 0 ? internalRecords[0] : (records.length > 0 ? records[0] : null);
+    
+    if (templateRecord) {
+        Object.keys(templateRecord).forEach(header => {
+            if (header !== 'REG' && header !== '_id' && header !== '_parentId' && header !== '_cnpj' && header !== '_order') {
+                newRecord[header] = '';
+            }
+        });
+    }
+
+    const updatedRecords = [newRecord, ...internalRecords];
+    setInternalRecords(updatedRecords);
+    onRecordsUpdate(updatedRecords, recordType);
+  }, [internalRecords, onRecordsUpdate, recordType, records]);
+
 
    const handleBatchAdd = useCallback(() => {
     const headersToParse = ['IND_ORI_DED', 'IND_NAT_DED', 'VL_DED_PIS', 'VL_DED_COFINS', 'VL_BC_OPER', 'CNPJ', 'INFO_COMPL'];
@@ -155,10 +156,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
 
     const updatedRecords = [...newRecords, ...internalRecords];
     
-    // First, update the local state to show the changes immediately
     setInternalRecords(updatedRecords);
-    
-    // Then, call the prop to update the parent state
     onRecordsUpdate(updatedRecords, recordType);
 
     toast({ title: "Sucesso!", description: `${newRecords.length} registro(s) adicionado(s) com sucesso.` });

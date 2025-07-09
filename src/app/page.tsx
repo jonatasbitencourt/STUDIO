@@ -218,15 +218,7 @@ export default function Home() {
         return;
     }
     try {
-        const fileContent = exportRecordsToEfdText(data.records);
-        const blob = new Blob([fileContent], { type: 'text/plain;charset=utf-8' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        const cnpjSuffix = selectedCnpj === 'all' ? 'TODOS' : selectedCnpj;
-        link.download = `EFD_CONTRIBUICOES_${cnpjSuffix}.txt`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        exportRecordsToEfdText(data.records);
         toast({
             title: "Exportação Concluída",
             description: "Seu arquivo foi gerado com sucesso.",
@@ -239,7 +231,7 @@ export default function Home() {
             description: "Não foi possível gerar o arquivo.",
         });
     }
-  }, [data, selectedCnpj, toast]);
+  }, [data, toast]);
 
   const allRecordTypes = data ? Object.keys(data.records) : [];
   const childRecords = new Set(Object.values(recordHierarchy).flat());

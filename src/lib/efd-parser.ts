@@ -226,98 +226,72 @@ const createRecord = (fields: string[], headers: string[], parentId?: string, cn
 };
 
 export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }): string => {
-    // 1. Flatten records and separate those with original order from new ones
-    const recordsWithOrder: EfdRecord[] = [];
-    const recordsWithoutOrder: EfdRecord[] = [];
-    Object.values(records).flat().forEach(r => {
-        if (r._order !== undefined) {
-            recordsWithOrder.push(r);
-        } else {
-            recordsWithoutOrder.push(r);
+    const finalRecordsList: EfdRecord[] = [];
+    const blockOrder = ['0', 'A', 'C', 'D', 'F', 'I', 'M', 'P', '1', '9'];
+
+    // 1. Reorder all records based on block and original _order
+    const allRecordsFlat = Object.values(records).flat();
+    allRecordsFlat.sort((a, b) => {
+        const blockA = a.REG.charAt(0);
+        const blockB = b.REG.charAt(0);
+        const indexA = blockOrder.indexOf(blockA);
+        const indexB = blockOrder.indexOf(blockB);
+
+        if (indexA !== indexB) {
+            return indexA - indexB;
         }
+        return (a._order ?? Infinity) - (b._order ?? Infinity);
     });
 
-    // 2. Sort records that have an original order
-    recordsWithOrder.sort((a, b) => a._order! - b._order!);
-
-    const finalRecordsList = [...recordsWithOrder];
-
-    // 3. Intelligently insert new records (without order) into the sorted list
-    recordsWithoutOrder.forEach(newRecord => {
-        let insertionIndex = -1;
-        // Find the last record of the same type to insert after
-        for (let i = finalRecordsList.length - 1; i >= 0; i--) {
-            if (finalRecordsList[i].REG === newRecord.REG) {
-                insertionIndex = i + 1;
-                break;
-            }
-        }
-        // If no record of the same type, find the last record of the same block
-        if (insertionIndex === -1) {
-            const block = newRecord.REG.charAt(0);
-            for (let i = finalRecordsList.length - 1; i >= 0; i--) {
-                if (finalRecordsList[i].REG.charAt(0) === block) {
-                    insertionIndex = i + 1;
-                    break;
-                }
-            }
-        }
-        
-        if (insertionIndex !== -1) {
-            finalRecordsList.splice(insertionIndex, 0, newRecord);
-        } else {
-            // Fallback: If the block itself is new, this is complex.
-            // For now, append at a logical point (e.g., before block 9)
-            const lastBlockIndex = finalRecordsList.findIndex(r => r.REG.startsWith('9'));
-            if (lastBlockIndex !== -1) {
-              finalRecordsList.splice(lastBlockIndex, 0, newRecord);
-            } else {
-              finalRecordsList.push(newRecord);
-            }
-        }
-    });
-
-    // 4. Recalculate all counters based on the final, ordered list.
-    // This is a direct and correct approach.
+    // 2. Recalculate all counters based on the final, ordered list.
     const blockCounters: { [key: string]: number } = {};
     const recordTypeCounters: { [key: string]: number } = {};
 
     // Single pass to count all records and their types.
-    for (const record of finalRecordsList) {
+    for (const record of allRecordsFlat) {
         const block = record.REG.charAt(0);
         
+        // Initialize counters if they don't exist
         if (!blockCounters[block]) blockCounters[block] = 0;
-        blockCounters[block]++;
-        
         if (!recordTypeCounters[record.REG]) recordTypeCounters[record.REG] = 0;
+
+        blockCounters[block]++;
         recordTypeCounters[record.REG]++;
     }
 
-    // Now, create the final records list with the correct counters.
-    const finalRecordsWithCounters = finalRecordsList.map(record => {
+    // Include the closing records in the block count
+    ['0', 'A', 'C', 'D', 'F', 'I', 'M', 'P', '1', '9'].forEach(block => {
+        if (blockCounters[block] > 0) {
+            blockCounters[block]++; // For the *990 record
+        }
+    });
+     // The 9 block also has 9001
+    if (blockCounters['9'] > 0) {
+        blockCounters['9']++;
+    }
+
+
+    // 3. Now, create the final records list with the correct counters.
+    for (const record of allRecordsFlat) {
         const newRecord = { ...record };
         const reg = newRecord.REG;
 
         if (reg.endsWith('990') && reg.length === 4) {
             const block = reg.charAt(0);
-            // The count for the block is the value from the counter.
             newRecord[`QTD_LIN_${block}`] = String(blockCounters[block] || 0);
         } else if (reg === '9900') {
-            // The count for a specific record type.
             newRecord.QTD_REG_BLC = String(recordTypeCounters[newRecord.REG_BLC!] || '0');
         } else if (reg === '9990') {
-            // The count for block 9.
             newRecord.QTD_LIN_9 = String(blockCounters['9'] || 0);
         } else if (reg === '9999') {
-            // The total number of lines in the file.
-            newRecord.QTD_LIN = String(finalRecordsList.length);
+            newRecord.QTD_LIN = String(allRecordsFlat.length + 1); // +1 for 9999 itself
         }
-        return newRecord;
-    });
+        finalRecordsList.push(newRecord);
+    }
     
-    // 5. Serialize to text
+    // 4. Serialize to text
     let efdText = '';
-    for (const record of finalRecordsWithCounters) {
+    for (const record of finalRecordsList) {
         const headers = RECORD_DEFINITIONS[record.REG];
         if (!headers) continue;
         const line = headers
@@ -325,6 +299,21 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
             .join('|');
         efdText += `|${line}|\n`;
     }
+    
+    const blob = new Blob([efdText], { type: 'text/plain;charset=windows-1252' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    
+    const C001 = records['0000']?.[0];
+    const cnpj = C001?.CNPJ || 'CNPJ_NAO_ENCONTRADO';
+    const dt_ini = C001?.DT_INI || 'DATA_INI';
+    const dt_fin = C001?.DT_FIN || 'DATA_FIN';
+    
+    link.download = `EFD_CONTRIBUICOES_${cnpj}_${dt_ini}_${dt_fin}.txt`;
+    
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
     
     return efdText;
 };
@@ -505,9 +494,3 @@ export const parseEfdFile = async (content: string): Promise<ParsedEfdData> => {
     ...summaries,
   };
 };
-
-    
-
-    
-
-    
