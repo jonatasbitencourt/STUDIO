@@ -226,111 +226,86 @@ const createRecord = (fields: string[], headers: string[], parentId?: string, cn
 };
 
 export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }): void => {
-    // Flatten records and ensure a preliminary sort. New records without `_order` go to the end.
-    let allRecordsFlat = Object.values(records).flat().sort((a, b) => (a._order ?? Infinity) - (b._order ?? Infinity));
+    // Step 1: Get all records from state, and separate original from new.
+    const allRecords = Object.values(records).flat();
+    let finalExportList = allRecords.filter(r => r._order !== undefined)
+                                      .sort((a, b) => r._order! - b._order!);
+    const newRecords = allRecords.filter(r => r._order === undefined);
 
-    // Identify new F700 records that need to be repositioned.
-    const newF700Records = allRecordsFlat.filter(r => r.REG === 'F700' && r._order === undefined);
+    // Step 2: Insert new records into the list at logical positions.
+    if (newRecords.length > 0) {
+        // Group new records by block for efficient insertion.
+        const newRecordsByBlock: { [key: string]: EfdRecord[] } = {};
+        newRecords.forEach(rec => {
+            const block = rec.REG.charAt(0);
+            if (!newRecordsByBlock[block]) newRecordsByBlock[block] = [];
+            newRecordsByBlock[block].push(rec);
+        });
 
-    if (newF700Records.length > 0) {
-        const existingRecords = allRecordsFlat.filter(r => !(r.REG === 'F700' && r._order === undefined));
-        
-        const recordsWithAssignedOrder = [...existingRecords];
+        // Insert each group of new records before their block's closing record (*990).
+        for (const block in newRecordsByBlock) {
+            const blockRecords = newRecordsByBlock[block];
+            const closerReg = `${block}990`;
+            let insertionIndex = finalExportList.findIndex(r => r.REG === closerReg);
 
-        // Group new F700 records by their CNPJ.
-        const newF700ByCnpj: { [cnpj: string]: EfdRecord[] } = {};
-        for (const record of newF700Records) {
-            if (record.CNPJ) {
-                if (!newF700ByCnpj[record.CNPJ]) {
-                    newF700ByCnpj[record.CNPJ] = [];
+            // If a closer is not found, find a fallback position (e.g., before the next block starts).
+            if (insertionIndex === -1) {
+                const nextBlockChar = String.fromCharCode(block.charCodeAt(0) + 1);
+                let fallbackIndex = finalExportList.findIndex(r => r.REG.charAt(0) === nextBlockChar);
+                if (fallbackIndex === -1) {
+                    // If no next block, insert before block 9.
+                    fallbackIndex = finalExportList.findIndex(r => r.REG.startsWith('9'));
                 }
-                newF700ByCnpj[record.CNPJ].push(record);
+                insertionIndex = fallbackIndex > -1 ? fallbackIndex : finalExportList.length;
             }
-        }
-        
-        const f010Records = existingRecords.filter(r => r.REG === 'F010').sort((a, b) => (a._order ?? 0) - (b._order ?? 0));
-        const F990 = existingRecords.find(r => r.REG === 'F990');
-
-        for (const cnpj in newF700ByCnpj) {
-            const F010 = f010Records.find(f => f.CNPJ === cnpj);
-            if (!F010 || F010._order === undefined) continue;
-
-            const F010_order = F010._order;
-            const f010_index = f010Records.indexOf(F010);
             
-            let end_order: number;
-            if (f010_index + 1 < f010Records.length) {
-                end_order = f010Records[f010_index + 1]._order!;
-            } else {
-                end_order = F990?._order ?? Infinity;
-            }
-
-            let maxOrderInBlock = F010_order;
-            for (const record of existingRecords) {
-                if (record._order! > F010_order && record._order! < end_order) {
-                    if (record._order! > maxOrderInBlock) {
-                        maxOrderInBlock = record._order!;
-                    }
-                }
-            }
-
-            newF700ByCnpj[cnpj].forEach((record, index) => {
-                recordsWithAssignedOrder.push({
-                    ...record,
-                    _order: maxOrderInBlock + (index + 1) * 0.1, // Assign fractional order
-                });
-            });
+            finalExportList.splice(insertionIndex, 0, ...blockRecords);
         }
-        // Re-sort the entire list with the newly assigned orders.
-        allRecordsFlat = recordsWithAssignedOrder.sort((a, b) => (a._order ?? Infinity) - (b._order ?? Infinity));
     }
-
-
-    // Recalculate counters based on the final, sorted list of records.
+    
+    // Step 3: With the final, complete list, calculate all counters.
     const recordTypeCounters: { [key: string]: number } = {};
-    allRecordsFlat.forEach(record => {
+    finalExportList.forEach(record => {
         recordTypeCounters[record.REG] = (recordTypeCounters[record.REG] || 0) + 1;
     });
 
     const blockCounters: { [key: string]: number } = {};
-    allRecordsFlat.forEach(record => {
+    finalExportList.forEach(record => {
         const block = record.REG.charAt(0);
         blockCounters[block] = (blockCounters[block] || 0) + 1;
     });
-
-    // Generate the final list for export, updating counter records with correct values.
-    const finalRecordsList = allRecordsFlat.map(record => {
-        const newRecord = { ...record };
+    
+    // Step 4: Generate the final text string, injecting the correct counts into the counter records.
+    let efdText = '';
+    for (const record of finalExportList) {
+        const newRecord = { ...record }; // Use a copy to avoid mutating state directly.
         const reg = newRecord.REG;
         
+        // Update block totalizers (*990)
         if (reg.endsWith('990') && reg.length === 4) {
             const block = reg.charAt(0);
             newRecord[`QTD_LIN_${block}`] = String(blockCounters[block] || 0);
         }
         
+        // Update specific record counters (9900)
         if (reg === '9900') {
             const recordTypeToCount = newRecord.REG_BLC!;
             newRecord.QTD_REG_BLC = String(recordTypeCounters[recordTypeToCount] || 0);
         }
         
+        // Update block 9 totalizer (9990)
         if (reg === '9990') {
             newRecord.QTD_LIN_9 = String(blockCounters['9'] || 0);
         }
         
+        // Update file totalizer (9999)
         if (reg === '9999') {
-            newRecord.QTD_LIN = String(allRecordsFlat.length);
+            newRecord.QTD_LIN = String(finalExportList.length);
         }
         
-        return newRecord;
-    });
-    
-    let efdText = '';
-    for (const record of finalRecordsList) {
-        const headers = RECORD_DEFINITIONS[record.REG];
+        const headers = RECORD_DEFINITIONS[reg];
         if (!headers) continue;
-        const line = headers
-            .map(field => record[field] || '')
-            .join('|');
+        const line = headers.map(field => newRecord[field] || '').join('|');
         efdText += `|${line}|\n`;
     }
     
@@ -526,5 +501,7 @@ export const parseEfdFile = async (content: string): Promise<ParsedEfdData> => {
     ...summaries,
   };
 };
+
+    
 
     
