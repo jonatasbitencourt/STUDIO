@@ -280,7 +280,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
                         Colar do Excel
                     </Button>
                  )}
-                 {!recordType.startsWith('C') && !recordType.startsWith('D') && (
+                 {!recordType.startsWith('0') && !recordType.startsWith('A') && !recordType.startsWith('C') && !recordType.startsWith('D') && (
                     <Button onClick={handleAddRow} className="shadow-neumo active:shadow-neumo-inset rounded-xl">
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Adicionar
