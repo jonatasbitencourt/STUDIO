@@ -150,7 +150,7 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   'M115': ['REG', 'DET_VALOR_AJ', 'CST_PIS', 'DET_BC_CRED', 'DET_ALIQ', 'DT_OPER_AJ', 'DESC_AJ', 'COD_CTA', 'INFO_COMPL'],
   'M200': ['REG', 'VL_TOT_CONT_NC_PER', 'VL_TOT_CRED_DESC', 'VL_TOT_CRED_DESC_ANT', 'VL_TOT_CONT_NC_DEV', 'VL_RET_NC', 'VL_OUT_DED_NC', 'VL_CONT_NC_REC', 'VL_TOT_CONT_CUM_PER', 'VL_RET_CUM', 'VL_OUT_DED_CUM', 'VL_CONT_CUM_REC', 'VL_TOT_CONT_REC'],
   'M205': ['REG', 'NUM_CAMPO', 'COD_REC', 'VL_DEBITO'],
-  'M210': ['REG', 'COD_CONT', 'VL_REC_BRT', 'VL_BC_CONT', 'ALIQ_PIS', 'QUANT_BC_PIS', 'ALIQ_PIS_QUANT', 'VL_CONT_APUR', 'VL_AJUS_ACRES', 'VL_AJUS_REDUC', 'VL_CONT_DIFER', 'VL_CONT_DIFER_ANT', 'VL_CONT_PER'],
+  'M210': ['REG', 'COD_CONT', 'VL_REC_BRT', 'VL_BC_CONT', 'VL_AJUS_ACRES_BC_PIS', 'VL_AJUS_REDUC_BC_PIS', 'VL_BC_CONT_AJUS', 'ALIQ_PIS', 'QUANT_BC_PIS', 'ALIQ_PIS_QUANT', 'VL_CONT_APUR', 'VL_AJUS_ACRES', 'VL_AJUS_REDUC', 'VL_CONT_DIFER', 'VL_CONT_DIFER_ANT', 'VL_CONT_PER'],
   'M211': ['REG', 'IND_TIP_COOP', 'VL_BC_CONT_ANT_EXC_COOP', 'VL_EXC_COOP_GER', 'VL_EXC_ESP_COOP', 'VL_BC_CONT_COOP'],
   'M215': ['REG', 'IND_AJ_BC', 'VL_AJ_BC', 'COD_AJ_BC', 'NUM_DOC', 'DESCR_AJ_BC', 'DT_REF', 'COD_CTA', 'CNPJ', 'INFO_COMPL'],
   'M220': ['REG', 'IND_AJ', 'VL_AJ', 'COD_AJ', 'NUM_DOC', 'DESCR_AJ', 'DT_REF'],
@@ -159,13 +159,13 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   'M350': ['REG', 'VL_TOT_FOL', 'VL_EXC_BC', 'VL_TOT_BC', 'ALIQ_PIS_FOL', 'VL_TOT_CONT_FOL'],
   'M400': ['REG', 'CST_PIS', 'VL_TOT_REC', 'COD_CTA', 'DESC_COMPL'],
   'M410': ['REG', 'NAT_REC', 'VL_REC', 'COD_CTA', 'DESC_COMPL'],
-  'M500': ['REG', 'COD_CRED', 'IND_CRED_ORI', 'VL_BC_COFINS', 'ALIQ_COFINS', 'QUANT_BC_COFINS', 'ALIQ_COFINS_QUANT', 'VL_CRED_APU', 'VL_AJUS_ACRES', 'VL_AJUS_REDUC', 'VL_CRED_DIFER', 'VL_CRED_COMP', 'VL_CRED_PER', 'VL_SALDO_CRED', 'VL_CRED_EXT_REC', 'COD_CTA'],
+  'M500': ['REG', 'COD_CRED', 'IND_CRED_ORI', 'VL_BC_COFINS', 'ALIQ_COFINS', 'QUANT_BC_COFINS', 'ALIQ_COFINS_QUANT', 'VL_CRED', 'VL_AJUS_ACRES', 'VL_AJUS_REDUC', 'VL_CRED_DIFER', 'VL_CRED_DISP', 'IND_DESC_CRED', 'VL_CRED_DESC', 'SLD_CRED'],
   'M505': ['REG', 'NAT_BC_CRED', 'CST_COFINS', 'VL_BC_COFINS_TOT', 'VL_BC_COFINS_CUM', 'VL_BC_COFINS_NC', 'VL_BC_COFINS', 'QUANT_BC_COFINS_TOT', 'QUANT_BC_COFINS', 'DESC_CRED'],
   'M510': ['REG', 'IND_AJ', 'VL_AJ', 'COD_AJ', 'NUM_DOC', 'DESCR_AJ', 'DT_REF'],
   'M515': ['REG', 'DET_VALOR_AJ', 'CST_COFINS', 'DET_BC_CRED', 'DET_ALIQ', 'DT_OPER_AJ', 'DESC_AJ', 'COD_CTA', 'INFO_COMPL'],
   'M600': ['REG', 'VL_TOT_CONT_NC_PER', 'VL_TOT_CRED_DESC', 'VL_TOT_CRED_DESC_ANT', 'VL_TOT_CONT_NC_DEV', 'VL_RET_NC', 'VL_OUT_DED_NC', 'VL_CONT_NC_REC', 'VL_TOT_CONT_CUM_PER', 'VL_RET_CUM', 'VL_OUT_DED_CUM', 'VL_CONT_CUM_REC', 'VL_TOT_CONT_REC'],
   'M605': ['REG', 'NUM_CAMPO', 'COD_REC', 'VL_DEBITO'],
-  'M610': ['REG', 'COD_CONT', 'VL_REC_BRT', 'VL_BC_CONT', 'ALIQ_COFINS', 'QUANT_BC_COFINS', 'ALIQ_COFINS_QUANT', 'VL_CONT_APUR', 'VL_AJUS_ACRES', 'VL_AJUS_REDUC', 'VL_CONT_DIFER', 'VL_CONT_DIFER_ANT', 'VL_CONT_PER'],
+  'M610': ['REG', 'COD_CONT', 'VL_REC_BRT', 'VL_BC_CONT', 'VL_AJUS_ACRES_BC_COFINS', 'VL_AJUS_REDUC_BC_COFINS', 'VL_BC_CONT_AJUS', 'ALIQ_COFINS', 'QUANT_BC_COFINS', 'ALIQ_COFINS_QUANT', 'VL_CONT_APUR', 'VL_AJUS_ACRES', 'VL_AJUS_REDUC', 'VL_CONT_DIFER', 'VL_CONT_DIFER_ANT', 'VL_CONT_PER'],
   'M611': ['REG', 'IND_TIP_COOP', 'VL_BC_CONT_ANT_EXC_COOP', 'VL_EXC_COOP_GER', 'VL_EXC_ESP_COOP', 'VL_BC_CONT'],
   'M615': ['REG', 'IND_AJ_BC', 'VL_AJ_BC', 'COD_AJ_BC', 'NUM_DOC', 'DESCR_AJ_BC', 'DT_REF', 'COD_CTA', 'CNPJ', 'INFO_COMPL'],
   'M620': ['REG', 'IND_AJ', 'VL_AJ', 'COD_AJ', 'NUM_DOC', 'DESCR_AJ', 'DT_REF'],
@@ -281,37 +281,42 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
     const blockCounters: { [key: string]: number } = {};
     const recordTypeCounters: { [key: string]: number } = {};
 
+    // First pass: count all records
     for (const record of finalRecordsList) {
         const block = record.REG.charAt(0);
-        blockCounters[block] = (blockCounters[block] || 0) + 1;
-        recordTypeCounters[record.REG] = (recordTypeCounters[record.REG] || 0) + 1;
+        // Initialize if not present
+        if (!blockCounters[block]) blockCounters[block] = 0;
+        if (!recordTypeCounters[record.REG]) recordTypeCounters[record.REG] = 0;
+        
+        blockCounters[block]++;
+        recordTypeCounters[record.REG]++;
     }
-    
-    // Add count for the closing record itself
+
+    // Add counts for closing records themselves, which are also part of the list
     Object.keys(blockCounters).forEach(block => {
-        if(finalRecordsList.some(r => r.REG === `${block}990`)) {
+        const closingRecordType = `${block}990`;
+        if (recordTypeCounters[closingRecordType]) {
             blockCounters[block]++;
         }
-    })
-    if(finalRecordsList.some(r => r.REG === '9990')) blockCounters['9']++;
-    if(finalRecordsList.some(r => r.REG === '9900')) blockCounters['9']++;
-    if(finalRecordsList.some(r => r.REG === '9001')) blockCounters['9']++;
-    if(finalRecordsList.some(r => r.REG === '9999')) blockCounters['9']++;
-
-
+    });
+    if (recordTypeCounters['9900']) blockCounters['9'] += recordTypeCounters['9900'];
+    if (recordTypeCounters['9990']) blockCounters['9']++;
+    if (recordTypeCounters['9999']) blockCounters['9']++;
+    if (recordTypeCounters['9001']) blockCounters['9']++;
+    
     const finalRecordsWithCounters = finalRecordsList.map(record => {
         const newRecord = { ...record };
         const reg = newRecord.REG;
 
         if (reg.endsWith('990') && reg.length === 4) {
             const block = reg.charAt(0);
-            newRecord[`QTD_LIN_${block}`] = String(blockCounters[block] || '0');
+            newRecord[`QTD_LIN_${block}`] = String(blockCounters[block] || 0);
         } else if (reg === '9900') {
             newRecord.QTD_REG_BLC = String(recordTypeCounters[newRecord.REG_BLC!] || '0');
         } else if (reg === '9990') {
-            newRecord.QTD_LIN_9 = String(blockCounters['9'] || '0');
+            newRecord.QTD_LIN_9 = String(blockCounters['9'] || 0);
         } else if (reg === '9999') {
-            newRecord.QTD_LIN = String(finalRecordsList.length + 1);
+            newRecord.QTD_LIN = String(finalRecordsList.length);
         }
         return newRecord;
     });
@@ -506,6 +511,8 @@ export const parseEfdFile = async (content: string): Promise<ParsedEfdData> => {
     ...summaries,
   };
 };
+
+    
 
     
 
