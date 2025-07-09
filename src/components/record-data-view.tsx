@@ -75,7 +75,7 @@ const EditableRow = memo(function EditableRow({
 
   return (
     <TableRow ref={rowRef}>
-      <TableCell className="sticky left-0 bg-background p-0 whitespace-nowrap">
+      <TableCell className="sticky left-0 bg-background p-0 whitespace-nowrap z-20">
         <Button
           variant="ghost"
           size="icon"
@@ -313,7 +313,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
             <Table className="w-max">
               <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-10">
                 <TableRow>
-                  <TableHead className="sticky left-0 bg-background z-20 h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">Ações</TableHead>
+                  <TableHead className="sticky left-0 bg-background z-30 h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">Ações</TableHead>
                   {headers.map(header => (
                     <TableHead key={header} className="h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">{header}</TableHead>
                   ))}
