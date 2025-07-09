@@ -99,7 +99,7 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   'D309': ['REG', 'NUM_PROC', 'IND_PROC'],
   'D350': ['REG', 'COD_MOD', 'ECF_MOD', 'ECF_FAB', 'ECF_CX', 'DT_DOC', 'CRO', 'CRZ', 'NUM_COO_INI', 'NUM_COO_FIN', 'VL_BRT', 'VL_ISS', 'VL_PIS', 'VL_COFINS', 'VL_ISENTOS', 'VL_NAO_TRIB', 'VL_CANC', 'VL_DESC', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS_APUR', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS_APUR', 'COD_CTA'],
   'D359': ['REG', 'NUM_PROC', 'IND_PROC'],
-  'D500': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'SUB', 'NUM_DOC', 'DT_DOC', 'DT_A_P', 'VL_DOC', 'VL_DESC', 'VL_SERV', 'VL_SERV_NT', 'VL_TERC', 'VL_DA', 'VL_BC_ICMS', 'VL_ICMS', 'COD_INF', 'VL_PIS', 'VL_COFINS'],
+  'D500': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'SUB', 'NUM_DOC', 'DT_DOC', 'DT_A_P', 'VL_DOC', 'VL_DESC', 'VL_SERV', 'VL_SERV_NT', 'VL_TERC', 'VL_DA', 'VL_BC_ICMS', 'VL_ICMS', 'COD_INF', 'VL_PIS', 'VL_COFINS', 'INF_COMPL'],
   'D501': ['REG', 'CST_PIS', 'VL_ITEM', 'NAT_BC_CRED', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'COD_CTA'],
   'D505': ['REG', 'CST_COFINS', 'VL_ITEM', 'NAT_BC_CRED', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA'],
   'D509': ['REG', 'NUM_PROC', 'IND_PROC'],
@@ -131,7 +131,7 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   'F560': ['REG', 'VL_REC_COMP', 'CST_PIS', 'QUANT_BC_PIS', 'ALIQ_PIS_QUANT', 'VL_PIS', 'CST_COFINS', 'QUANT_BC_COFINS', 'ALIQ_COFINS_QUANT', 'VL_COFINS', 'COD_MOD', 'CFOP', 'COD_CTA', 'INFO_COMPL'],
   'F569': ['REG', 'NUM_PROC', 'IND_PROC'],
   'F600': ['REG', 'IND_NAT_RET', 'DT_RET', 'VL_BC_RET', 'VL_RET', 'COD_REC', 'IND_NAT_REC', 'CNPJ', 'VL_RET_PIS', 'VL_RET_COFINS', 'IND_DEC'],
-  'F700': ['REG', 'IND_ORI_DED', 'IND_NAT_DED', 'VL_DED_PIS', 'VL_DED_COFINS', 'VL_BC_OPER', 'CNPJ', 'INFO_COMPL'],
+  'F700': ['REG', 'IND_ORI_DED', 'IND_NAT_DED', 'VL_DED_PIS', 'VL_DED_COFINS', 'VL_BC_OPER', 'CNPJ', 'INF_COMPL'],
   'F800': ['REG', 'NAT_CRED_SUC', 'DT_SUCESS', 'CNPJ_SUCED', 'PER_APU_CRED_ORIG', 'VL_CRED_PIS', 'VL_CRED_COFINS', 'PERC_FUS_CIS_INCORP'],
   'F990': ['REG', 'QTD_LIN_F'],
   'I001': ['REG', 'IND_MOV'],
@@ -227,22 +227,21 @@ const createRecord = (fields: string[], headers: string[], parentId?: string, cn
 
 export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }): void => {
     const blockOrder = ['0', 'A', 'C', 'D', 'F', 'I', 'M', 'P', '1', '9'];
-
-    let allRecordsFlat = Object.values(records).flat();
-
-    const recordTypeCounters: { [key: string]: number } = {};
-    const blockCounters: { [key: string]: number } = {};
-
-    const sortedForCounting = [...allRecordsFlat].sort((a, b) => (a._order ?? 0) - (b._order ?? 0));
     
-    for (const record of sortedForCounting) {
-        if (!RECORD_DEFINITIONS[record.REG]) continue;
+    // Flatten all records and sort them by their original order to maintain file structure
+    let allRecordsFlat = Object.values(records).flat().sort((a, b) => (a._order ?? 0) - (b._order ?? 0));
 
+    // Recalculate counters based on the final list of records to be exported
+    const recordTypeCounters: { [key: string]: number } = {};
+    for (const record of allRecordsFlat) {
         if (!recordTypeCounters[record.REG]) {
             recordTypeCounters[record.REG] = 0;
         }
         recordTypeCounters[record.REG]++;
-        
+    }
+
+    const blockCounters: { [key: string]: number } = {};
+    for (const record of allRecordsFlat) {
         const block = record.REG.charAt(0);
         if (!blockCounters[block]) {
             blockCounters[block] = 0;
@@ -250,7 +249,8 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
         blockCounters[block]++;
     }
     
-    const finalRecordsList = sortedForCounting.map(record => {
+    // Update counter records (e.g., 0990, 9900) with the new counts
+    const finalRecordsList = allRecordsFlat.map(record => {
         const newRecord = { ...record };
         const reg = newRecord.REG;
         
@@ -263,7 +263,7 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
             const recordTypeToCount = newRecord.REG_BLC!;
             newRecord.QTD_REG_BLC = String(recordTypeCounters[recordTypeToCount] || 0);
         }
-
+        
         if (reg === '9990') {
             newRecord.QTD_LIN_9 = String(blockCounters['9'] || 0);
         }
@@ -275,19 +275,6 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
         return newRecord;
     });
 
-    finalRecordsList.sort((a, b) => {
-        const blockA = a.REG.charAt(0);
-        const blockB = b.REG.charAt(0);
-        const indexA = blockOrder.indexOf(blockA);
-        const indexB = blockOrder.indexOf(blockB);
-
-        if (indexA !== indexB) {
-            return indexA - indexB;
-        }
-        return (a._order ?? Infinity) - (b._order ?? Infinity);
-    });
-
-    
     let efdText = '';
     for (const record of finalRecordsList) {
         const headers = RECORD_DEFINITIONS[record.REG];
