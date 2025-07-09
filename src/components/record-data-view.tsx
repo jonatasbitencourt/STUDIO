@@ -47,7 +47,7 @@ const MemoizedRow = memo(function MemoizedRow({ record, headers, handleFieldChan
               type="text"
               value={record[header] || ''}
               onChange={(e) => handleFieldChange(record._id!, header, e.target.value)}
-              size={Math.min(60, Math.max(String(record[header] || '').length, header.length, 10))}
+              style={{ width: `${Math.min(400, Math.max(String(record[header] || '').length, header.length, 10) * 5)}px` }}
               className="h-auto bg-transparent px-1 py-0.5 text-[8px] border-none rounded-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               disabled={header === 'REG'}
             />
@@ -132,7 +132,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
     });
   }, [onRecordsUpdate, recordType, records]);
 
-  const handleBatchAdd = useCallback(() => {
+   const handleBatchAdd = useCallback(() => {
     const headersToParse = ['IND_ORI_DED', 'IND_NAT_DED', 'VL_DED_PIS', 'VL_DED_COFINS', 'VL_BC_OPER', 'CNPJ', 'INFO_COMPL'];
     const lines = batchAddText.trim().split('\n').filter(line => line.trim() !== '');
 
@@ -152,15 +152,20 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
         });
         return newRecord;
     });
-    
+
     const updatedRecords = [...newRecords, ...internalRecords];
-    onRecordsUpdate(updatedRecords, recordType);
+    
+    // First, update the local state to show the changes immediately
     setInternalRecords(updatedRecords);
+    
+    // Then, call the prop to update the parent state
+    onRecordsUpdate(updatedRecords, recordType);
 
     toast({ title: "Sucesso!", description: `${newRecords.length} registro(s) adicionado(s) com sucesso.` });
     setBatchAddText('');
     setIsBatchAddDialogOpen(false);
   }, [batchAddText, onRecordsUpdate, toast, recordType, internalRecords]);
+
 
 
   useEffect(() => {
