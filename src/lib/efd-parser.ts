@@ -21,7 +21,7 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   '0145': ['REG', 'COD_INC_TRIB', 'VL_REC_TOT', 'VL_REC_ATIV', 'VL_REC_DEMAIS_ATIV'],
   '0150': ['REG', 'COD_PART', 'NOME', 'COD_PAIS', 'CNPJ', 'CPF', 'IE', 'COD_MUN', 'SUFRAMA', 'END', 'NUM', 'COMPL', 'BAIRRO'],
   '0190': ['REG', 'UNID', 'DESCR'],
-  '0200': ['REG', 'COD_ITEM', 'DESCR_ITEM', 'COD_BARRA', 'COD_ANT_ITEM', 'UNID_INV', 'TP_ITEM', 'NCM', 'EX_IPI', 'COD_NCM_ANT', 'CEST', 'ALIQ_ICMS'],
+  '0200': ['REG', 'COD_ITEM', 'DESCR_ITEM', 'COD_BARRA', 'COD_ANT_ITEM', 'UNID_INV', 'TP_ITEM', 'COD_NCM', 'EX_IPI', 'COD_GEN', 'COD_LST', 'ALIQ_ICMS'],
   '0205': ['REG', 'COD_ANT_ITEM', 'DT_INI_ALT', 'DT_FIM_ALT'],
   '0206': ['REG', 'COD_COMB'],
   '0208': ['REG', 'COD_TAB', 'COD_GRUPO'],
@@ -536,3 +536,4 @@ export const parseEfdFile = async (content: string): Promise<ParsedEfdData> => {
     
 
     
+
