@@ -99,7 +99,7 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   'D309': ['REG', 'NUM_PROC', 'IND_PROC'],
   'D350': ['REG', 'COD_MOD', 'ECF_MOD', 'ECF_FAB', 'ECF_CX', 'DT_DOC', 'CRO', 'CRZ', 'NUM_COO_INI', 'NUM_COO_FIN', 'VL_BRT', 'VL_ISS', 'VL_PIS', 'VL_COFINS', 'VL_ISENTOS', 'VL_NAO_TRIB', 'VL_CANC', 'VL_DESC', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS_APUR', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS_APUR', 'COD_CTA'],
   'D359': ['REG', 'NUM_PROC', 'IND_PROC'],
-  'D500': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'SUB', 'NUM_DOC', 'DT_DOC', 'DT_AQU_SERV', 'VL_DOC', 'VL_DESC', 'VL_BC_ICMS', 'VL_ICMS', 'VL_PIS', 'VL_COFINS', 'COD_CTA', 'COD_CCUS'],
+  'D500': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'SUB', 'NUM_DOC', 'DT_DOC', 'DT_A_P', 'VL_DOC', 'VL_DESC', 'VL_SERV', 'VL_SERV_NT', 'VL_TERC', 'VL_DA', 'VL_BC_ICMS', 'VL_ICMS', 'COD_INF', 'VL_PIS', 'VL_COFINS'],
   'D501': ['REG', 'CST_PIS', 'VL_ITEM', 'NAT_BC_CRED', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'COD_CTA'],
   'D505': ['REG', 'CST_COFINS', 'VL_ITEM', 'NAT_BC_CRED', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA'],
   'D509': ['REG', 'NUM_PROC', 'IND_PROC'],
@@ -110,7 +110,7 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   'D990': ['REG', 'QTD_LIN_D'],
   'F001': ['REG', 'IND_MOV'],
   'F010': ['REG', 'CNPJ'],
-  'F100': ['REG', 'IND_OPER', 'COD_PART', 'COD_ITEM', 'DT_OPER', 'VL_OPER', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'IND_ORIG_CRED', 'COD_CTA', 'COD_CCUS', 'DESC_DOC_OPER'],
+  'F100': ['REG', 'IND_OPER', 'COD_PART', 'COD_ITEM', 'DT_OPER', 'VL_OPER', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'NAT_BC_CRED', 'IND_ORIG_CRED', 'COD_CTA', 'COD_CCUS', 'DESC_DOC_OPER'],
   'F111': ['REG', 'NUM_PROC', 'IND_PROC'],
   'F120': ['REG', 'NAT_BC_CRED', 'IDENT_BEM_IMOB', 'IND_ORIG_CRED', 'IND_UTIL_BEM_IMOB', 'VL_OPER_DEP', 'VL_EXC_BC', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA', 'COD_CCUS', 'DESCR_BEM'],
   'F129': ['REG', 'NUM_PROC', 'IND_PROC'],
@@ -194,14 +194,14 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   '1200': ['REG', 'PER_APUR_ANT', 'NAT_CONT_REC', 'DT_RECOL', 'VL_CONT_APUR', 'VL_CRED_PIS_DESC', 'VL_OUT_DED_PIS', 'VL_PIS_PAG', 'VL_CONT_EXT', 'VL_MUL', 'VL_JUR', 'DT_RECOL'],
   '1210': ['REG', 'CNPJ', 'CST_PIS', 'COD_PART', 'DT_OPER', 'VL_OPER', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'COD_CTA', 'DESC_COMPL'],
   '1220': ['REG', 'PER_APUR_CRED', 'ORIG_CRED', 'COD_CRED', 'VL_CRED_DESC'],
-  '1300': ['REG', 'IND_NAT_RET', 'PR_REC_RET', 'VL_RET_BRT', 'VL_RET_APU', 'VL_RET_DED', 'VL_RET_PER', 'VL_RET_DCOMP', 'SLD_RET'],
+  '1300': ['REG', 'IND_NAT_RET', 'PR_REC_RET', 'VL_RET_APU', 'VL_RET_DED', 'VL_RET_PER', 'VL_RET_DCOMP', 'SLD_RET'],
   '1500': ['REG', 'PER_APU_CRED', 'ORIG_CRED', 'CNPJ_SUC', 'COD_CRED', 'VL_CRED_APU', 'VL_CRED_EXT_APU', 'VL_CRED_TOT', 'VL_CRED_DESC_ANT', 'VL_CRED_DESC_PER', 'VL_CRED_TRANSF', 'VL_CRED_OUT', 'SLD_CRED'],
   '1501': ['REG', 'COD_PART', 'COD_ITEM', 'COD_MOD', 'SER', 'SUB_SER', 'NUM_DOC', 'DT_OPER', 'CHV_NFE', 'VL_OPER', 'CFOP', 'NAT_BC_CRED', 'IND_ORIG_CRED', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA', 'COD_CCUS', 'DESC_COMPL', 'PER_ESCRIT', 'CNPJ'],
   '1502': ['REG', 'VL_CRED_COFINS_TRIB_MI', 'VL_CRED_COFINS_NT_MI', 'VL_CRED_COFINS_EXP'],
   '1600': ['REG', 'PER_APUR_ANT', 'NAT_CONT_REC', 'VL_CONT_APUR', 'VL_CRED_COFINS_DESC', 'VL_OUT_DED_COFINS', 'VL_COFINS_PAG', 'VL_CONT_EXT', 'VL_MUL', 'VL_JUR', 'DT_RECOL'],
   '1610': ['REG', 'CNPJ', 'CST_COFINS', 'COD_PART', 'DT_OPER', 'VL_OPER', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA', 'DESC_COMPL'],
   '1620': ['REG', 'PER_APU_CRED', 'ORIG_CRED', 'COD_CRED', 'VL_CRED_DESC'],
-  '1700': ['REG', 'IND_NAT_RET', 'PR_REC_RET', 'VL_RET_BRT', 'VL_RET_APU', 'VL_RET_DED', 'VL_RET_PER', 'VL_RET_DCOMP', 'SLD_RET'],
+  '1700': ['REG', 'IND_NAT_RET', 'PR_REC_RET', 'VL_RET_APU', 'VL_RET_DED', 'VL_RET_PER', 'VL_RET_DCOMP', 'SLD_RET'],
   '1800': ['REG', 'INC_IMOB', 'REC_RECEB_RET', 'REC_FIN_RET', 'BC_RET', 'ALIQ_RET', 'VL_REC_UNI', 'DT_REC_UNI', 'COD_REC'],
   '1809': ['REG', 'NUM_PROC', 'IND_PROC'],
   '1900': ['REG', 'CNPJ', 'COD_MOD', 'SER', 'SUB', 'COD_SIT', 'VL_DOC', 'QTD_DOC', 'CST_PIS', 'CST_COFINS', 'CFOP', 'INFO_COMPL', 'COD_CTA'],
@@ -228,53 +228,46 @@ const createRecord = (fields: string[], headers: string[], parentId?: string, cn
 export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }): void => {
     const blockOrder = ['0', 'A', 'C', 'D', 'F', 'I', 'M', 'P', '1', '9'];
 
-    // 1. Get a flat, ordered list of all records that will be in the final file.
     let allRecordsFlat = Object.values(records).flat();
 
-    // Re-calculate all counts from scratch based on the current state of the records.
     const recordTypeCounters: { [key: string]: number } = {};
-    for (const record of allRecordsFlat) {
+    const blockCounters: { [key: string]: number } = {};
+
+    const sortedForCounting = [...allRecordsFlat].sort((a, b) => (a._order ?? 0) - (b._order ?? 0));
+    
+    for (const record of sortedForCounting) {
+        if (!RECORD_DEFINITIONS[record.REG]) continue;
+
         if (!recordTypeCounters[record.REG]) {
             recordTypeCounters[record.REG] = 0;
         }
         recordTypeCounters[record.REG]++;
-    }
-
-    const blockCounters: { [key: string]: number } = {};
-    for (const recordType in recordTypeCounters) {
-        const block = recordType.charAt(0);
+        
+        const block = record.REG.charAt(0);
         if (!blockCounters[block]) {
             blockCounters[block] = 0;
         }
-        // Each block's count is the sum of its record types.
-        blockCounters[block] += recordTypeCounters[recordType];
+        blockCounters[block]++;
     }
     
-    // 2. Create a new list with updated counter values
-    const finalRecordsList = allRecordsFlat.map(record => {
+    const finalRecordsList = sortedForCounting.map(record => {
         const newRecord = { ...record };
         const reg = newRecord.REG;
         
-        // Update block totalizers (*990)
         if (reg.endsWith('990') && reg.length === 4) {
             const block = reg.charAt(0);
-             // The count should include the opening (e.g., C001) and closing (e.g., C990) records.
             newRecord[`QTD_LIN_${block}`] = String(blockCounters[block] || 0);
         }
         
-        // Update record type totalizers (9900)
         if (reg === '9900') {
             const recordTypeToCount = newRecord.REG_BLC!;
             newRecord.QTD_REG_BLC = String(recordTypeCounters[recordTypeToCount] || 0);
         }
 
-        // Update block 9 totalizer (9990)
         if (reg === '9990') {
-             // The count of block 9 includes 9001, all 9900s, 9990, and 9999
             newRecord.QTD_LIN_9 = String(blockCounters['9'] || 0);
         }
         
-        // Update file totalizer (9999)
         if (reg === '9999') {
             newRecord.QTD_LIN = String(allRecordsFlat.length);
         }
@@ -282,7 +275,6 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
         return newRecord;
     });
 
-    // 3. Sort the final list
     finalRecordsList.sort((a, b) => {
         const blockA = a.REG.charAt(0);
         const blockB = b.REG.charAt(0);
@@ -296,7 +288,6 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
     });
 
     
-    // 4. Serialize to text
     let efdText = '';
     for (const record of finalRecordsList) {
         const headers = RECORD_DEFINITIONS[record.REG];
