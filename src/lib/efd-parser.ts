@@ -226,44 +226,75 @@ const createRecord = (fields: string[], headers: string[], parentId?: string, cn
 };
 
 export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }): void => {
-    // Step 1: Get all records from state, and separate original from new.
     const allRecords = Object.values(records).flat();
     let finalExportList = allRecords.filter(r => r._order !== undefined)
                                       .sort((a, b) => a._order! - b._order!);
     const newRecords = allRecords.filter(r => r._order === undefined);
 
-    // Step 2: Insert new records into the list at logical positions.
     if (newRecords.length > 0) {
-        // Group new records by block for efficient insertion.
-        const newRecordsByBlock: { [key: string]: EfdRecord[] } = {};
-        newRecords.forEach(rec => {
-            const block = rec.REG.charAt(0);
-            if (!newRecordsByBlock[block]) newRecordsByBlock[block] = [];
-            newRecordsByBlock[block].push(rec);
-        });
+        const childToParentMap: { [child: string]: string } = {};
+        for (const parent in recordHierarchy) {
+            for (const child of recordHierarchy[parent]) {
+                childToParentMap[child] = parent;
+            }
+        }
 
-        // Insert each group of new records before their block's closing record (*990).
-        for (const block in newRecordsByBlock) {
-            const blockRecords = newRecordsByBlock[block];
-            const closerReg = `${block}990`;
-            let insertionIndex = finalExportList.findIndex(r => r.REG === closerReg);
+        const recordsToInsert: { record: EfdRecord, index: number }[] = [];
 
-            // If a closer is not found, find a fallback position (e.g., before the next block starts).
-            if (insertionIndex === -1) {
-                const nextBlockChar = String.fromCharCode(block.charCodeAt(0) + 1);
-                let fallbackIndex = finalExportList.findIndex(r => r.REG.charAt(0) === nextBlockChar);
-                if (fallbackIndex === -1) {
-                    // If no next block, insert before block 9.
-                    fallbackIndex = finalExportList.findIndex(r => r.REG.startsWith('9'));
+        newRecords.forEach(newRec => {
+            let insertionIndex = -1;
+            const parentType = childToParentMap[newRec.REG];
+
+            if (parentType) {
+                // It's a child record. Find the last occurrence of its parent or any of its siblings.
+                const familyTypes = new Set(recordHierarchy[parentType]);
+                familyTypes.add(parentType);
+                
+                for (let i = finalExportList.length - 1; i >= 0; i--) {
+                    if (familyTypes.has(finalExportList[i].REG)) {
+                        insertionIndex = i + 1; // Insert after the last known family member.
+                        break;
+                    }
                 }
-                insertionIndex = fallbackIndex > -1 ? fallbackIndex : finalExportList.length;
             }
             
-            finalExportList.splice(insertionIndex, 0, ...blockRecords);
-        }
+            // Fallback for non-child records or children whose parents aren't in the file.
+            // Insert before the block's closing record.
+            if (insertionIndex === -1) {
+                const block = newRec.REG.charAt(0);
+                const closerReg = `${block}990`;
+                insertionIndex = finalExportList.findIndex(r => r.REG === closerReg);
+
+                // If no closer found (should not happen in a valid file), find the end of the block.
+                if (insertionIndex === -1) {
+                    for (let i = finalExportList.length - 1; i >= 0; i--) {
+                        if (finalExportList[i].REG.charAt(0) === block) {
+                            insertionIndex = i + 1;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // If still no index, something is very wrong. Place before block 9 as a last resort.
+            if (insertionIndex === -1) {
+                insertionIndex = finalExportList.findIndex(r => r.REG.startsWith('9'));
+                if (insertionIndex === -1) {
+                    insertionIndex = finalExportList.length;
+                }
+            }
+
+            recordsToInsert.push({ record: newRec, index: insertionIndex });
+        });
+
+        // Sort insertions by index descending to avoid shifting indices during splicing.
+        recordsToInsert.sort((a, b) => b.index - a.index);
+        recordsToInsert.forEach(item => {
+            finalExportList.splice(item.index, 0, item.record);
+        });
     }
     
-    // Step 3: With the final, complete list, calculate all counters.
+    // With the final, complete list, calculate all counters.
     const recordTypeCounters: { [key: string]: number } = {};
     finalExportList.forEach(record => {
         recordTypeCounters[record.REG] = (recordTypeCounters[record.REG] || 0) + 1;
@@ -275,7 +306,7 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
         blockCounters[block] = (blockCounters[block] || 0) + 1;
     });
     
-    // Step 4: Generate the final text string, injecting the correct counts into the counter records.
+    // Generate the final text string, injecting the correct counts into the counter records.
     let efdText = '';
     for (const record of finalExportList) {
         const newRecord = { ...record }; // Use a copy to avoid mutating state directly.
