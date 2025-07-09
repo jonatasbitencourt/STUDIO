@@ -47,7 +47,7 @@ const MemoizedRow = memo(function MemoizedRow({ record, headers, handleFieldChan
               type="text"
               value={record[header] || ''}
               onChange={(e) => handleFieldChange(record._id!, header, e.target.value)}
-              size={Math.max(String(record[header] || '').length, header.length, 5)}
+              size={Math.min(60, Math.max(String(record[header] || '').length, header.length, 10))}
               className="h-auto bg-transparent px-1 py-0.5 text-[8px] border-none rounded-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               disabled={header === 'REG'}
             />
