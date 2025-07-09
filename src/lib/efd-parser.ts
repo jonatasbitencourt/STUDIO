@@ -88,8 +88,8 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   'D001': ['REG', 'IND_MOV'],
   'D010': ['REG', 'CNPJ'],
   'D100': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'SUB', 'NUM_DOC', 'CHV_CTE', 'DT_DOC', 'DT_A_P', 'TP_CT-E', 'CHV_CTE_REF', 'VL_DOC', 'VL_DESC', 'IND_FRT', 'VL_SERV', 'VL_BC_ICMS', 'VL_ICMS', 'VL_NT', 'COD_INF', 'COD_CTA'],
-  'D101': ['REG', 'IND_NAT_FRT', 'VL_ITEM', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'COD_CTA'],
-  'D105': ['REG', 'IND_NAT_FRT', 'VL_ITEM', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA'],
+  'D101': ['REG', 'IND_NAT_FRT', 'VL_ITEM', 'CST_PIS', 'NAT_BC_CRED', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'COD_CTA'],
+  'D105': ['REG', 'IND_NAT_FRT', 'VL_ITEM', 'CST_COFINS', 'NAT_BC_CRED', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA'],
   'D111': ['REG', 'NUM_PROC', 'IND_PROC'],
   'D200': ['REG', 'COD_MOD', 'SER', 'NUM_DOC_INI', 'NUM_DOC_FIN', 'DT_DOC', 'DT_EXE_SERV', 'VL_DOC', 'VL_DESC', 'VL_CANC', 'VL_CONT_PIS', 'VL_CONT_COFINS'],
   'D201': ['REG', 'CST_PIS', 'VL_ITEM', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'COD_CTA'],
@@ -225,12 +225,65 @@ const createRecord = (fields: string[], headers: string[], parentId?: string, cn
   return record;
 };
 
-export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }): string => {
+export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }): void => {
     const blockOrder = ['0', 'A', 'C', 'D', 'F', 'I', 'M', 'P', '1', '9'];
 
     // 1. Get a flat, ordered list of all records that will be in the final file.
-    const allRecordsFlat = Object.values(records).flat();
-    allRecordsFlat.sort((a, b) => {
+    let allRecordsFlat = Object.values(records).flat();
+
+    // Re-calculate all counts from scratch based on the current state of the records.
+    const recordTypeCounters: { [key: string]: number } = {};
+    for (const record of allRecordsFlat) {
+        if (!recordTypeCounters[record.REG]) {
+            recordTypeCounters[record.REG] = 0;
+        }
+        recordTypeCounters[record.REG]++;
+    }
+
+    const blockCounters: { [key: string]: number } = {};
+    for (const recordType in recordTypeCounters) {
+        const block = recordType.charAt(0);
+        if (!blockCounters[block]) {
+            blockCounters[block] = 0;
+        }
+        // Each block's count is the sum of its record types.
+        blockCounters[block] += recordTypeCounters[recordType];
+    }
+    
+    // 2. Create a new list with updated counter values
+    const finalRecordsList = allRecordsFlat.map(record => {
+        const newRecord = { ...record };
+        const reg = newRecord.REG;
+        
+        // Update block totalizers (*990)
+        if (reg.endsWith('990') && reg.length === 4) {
+            const block = reg.charAt(0);
+             // The count should include the opening (e.g., C001) and closing (e.g., C990) records.
+            newRecord[`QTD_LIN_${block}`] = String(blockCounters[block] || 0);
+        }
+        
+        // Update record type totalizers (9900)
+        if (reg === '9900') {
+            const recordTypeToCount = newRecord.REG_BLC!;
+            newRecord.QTD_REG_BLC = String(recordTypeCounters[recordTypeToCount] || 0);
+        }
+
+        // Update block 9 totalizer (9990)
+        if (reg === '9990') {
+             // The count of block 9 includes 9001, all 9900s, 9990, and 9999
+            newRecord.QTD_LIN_9 = String(blockCounters['9'] || 0);
+        }
+        
+        // Update file totalizer (9999)
+        if (reg === '9999') {
+            newRecord.QTD_LIN = String(allRecordsFlat.length);
+        }
+        
+        return newRecord;
+    });
+
+    // 3. Sort the final list
+    finalRecordsList.sort((a, b) => {
         const blockA = a.REG.charAt(0);
         const blockB = b.REG.charAt(0);
         const indexA = blockOrder.indexOf(blockA);
@@ -242,51 +295,6 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
         return (a._order ?? Infinity) - (b._order ?? Infinity);
     });
 
-    // 2. Calculate final counts based on this definitive list.
-    const blockCounters: { [key: string]: number } = {};
-    const recordTypeCounters: { [key: string]: number } = {};
-
-    for (const record of allRecordsFlat) {
-        const block = record.REG.charAt(0);
-        if (!blockCounters[block]) blockCounters[block] = 0;
-        blockCounters[block]++;
-
-        if (!recordTypeCounters[record.REG]) recordTypeCounters[record.REG] = 0;
-        recordTypeCounters[record.REG]++;
-    }
-
-    // 3. Create the final list of records with updated counter values.
-    const finalRecordsList: EfdRecord[] = [];
-    const totalLines = allRecordsFlat.length;
-
-    for (const record of allRecordsFlat) {
-        const newRecord = { ...record };
-        const reg = newRecord.REG;
-
-        // Update block totalizers (*990)
-        if (reg.endsWith('990') && reg.length === 4) {
-            const block = reg.charAt(0);
-            newRecord[`QTD_LIN_${block}`] = String(blockCounters[block] || 0);
-        }
-        
-        // Update record type totalizers (9900)
-        if (reg === '9900') {
-            const recordTypeToCount = newRecord.REG_BLC!;
-            newRecord.QTD_REG_BLC = String(recordTypeCounters[recordTypeToCount] || '0');
-        }
-
-        // Update block 9 totalizer (9990)
-        if (reg === '9990') {
-            newRecord.QTD_LIN_9 = String(blockCounters['9'] || 0);
-        }
-        
-        // Update file totalizer (9999)
-        if (reg === '9999') {
-            newRecord.QTD_LIN = String(totalLines);
-        }
-
-        finalRecordsList.push(newRecord);
-    }
     
     // 4. Serialize to text
     let efdText = '';
@@ -313,8 +321,6 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
-    return efdText;
 };
 
 
@@ -493,3 +499,5 @@ export const parseEfdFile = async (content: string): Promise<ParsedEfdData> => {
     ...summaries,
   };
 };
+
+    
