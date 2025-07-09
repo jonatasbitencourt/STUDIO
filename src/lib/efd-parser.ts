@@ -226,30 +226,79 @@ const createRecord = (fields: string[], headers: string[], parentId?: string, cn
 };
 
 export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }): void => {
-    const blockOrder = ['0', 'A', 'C', 'D', 'F', 'I', 'M', 'P', '1', '9'];
-    
-    // Flatten all records and sort them by their original order to maintain file structure
-    let allRecordsFlat = Object.values(records).flat().sort((a, b) => (a._order ?? 0) - (b._order ?? 0));
+    // Flatten records and ensure a preliminary sort. New records without `_order` go to the end.
+    let allRecordsFlat = Object.values(records).flat().sort((a, b) => (a._order ?? Infinity) - (b._order ?? Infinity));
 
-    // Recalculate counters based on the final list of records to be exported
-    const recordTypeCounters: { [key: string]: number } = {};
-    for (const record of allRecordsFlat) {
-        if (!recordTypeCounters[record.REG]) {
-            recordTypeCounters[record.REG] = 0;
+    // Identify new F700 records that need to be repositioned.
+    const newF700Records = allRecordsFlat.filter(r => r.REG === 'F700' && r._order === undefined);
+
+    if (newF700Records.length > 0) {
+        const existingRecords = allRecordsFlat.filter(r => !(r.REG === 'F700' && r._order === undefined));
+        
+        const recordsWithAssignedOrder = [...existingRecords];
+
+        // Group new F700 records by their CNPJ.
+        const newF700ByCnpj: { [cnpj: string]: EfdRecord[] } = {};
+        for (const record of newF700Records) {
+            if (record.CNPJ) {
+                if (!newF700ByCnpj[record.CNPJ]) {
+                    newF700ByCnpj[record.CNPJ] = [];
+                }
+                newF700ByCnpj[record.CNPJ].push(record);
+            }
         }
-        recordTypeCounters[record.REG]++;
+        
+        const f010Records = existingRecords.filter(r => r.REG === 'F010').sort((a, b) => (a._order ?? 0) - (b._order ?? 0));
+        const F990 = existingRecords.find(r => r.REG === 'F990');
+
+        for (const cnpj in newF700ByCnpj) {
+            const F010 = f010Records.find(f => f.CNPJ === cnpj);
+            if (!F010 || F010._order === undefined) continue;
+
+            const F010_order = F010._order;
+            const f010_index = f010Records.indexOf(F010);
+            
+            let end_order: number;
+            if (f010_index + 1 < f010Records.length) {
+                end_order = f010Records[f010_index + 1]._order!;
+            } else {
+                end_order = F990?._order ?? Infinity;
+            }
+
+            let maxOrderInBlock = F010_order;
+            for (const record of existingRecords) {
+                if (record._order! > F010_order && record._order! < end_order) {
+                    if (record._order! > maxOrderInBlock) {
+                        maxOrderInBlock = record._order!;
+                    }
+                }
+            }
+
+            newF700ByCnpj[cnpj].forEach((record, index) => {
+                recordsWithAssignedOrder.push({
+                    ...record,
+                    _order: maxOrderInBlock + (index + 1) * 0.1, // Assign fractional order
+                });
+            });
+        }
+        // Re-sort the entire list with the newly assigned orders.
+        allRecordsFlat = recordsWithAssignedOrder.sort((a, b) => (a._order ?? Infinity) - (b._order ?? Infinity));
     }
+
+
+    // Recalculate counters based on the final, sorted list of records.
+    const recordTypeCounters: { [key: string]: number } = {};
+    allRecordsFlat.forEach(record => {
+        recordTypeCounters[record.REG] = (recordTypeCounters[record.REG] || 0) + 1;
+    });
 
     const blockCounters: { [key: string]: number } = {};
-    for (const record of allRecordsFlat) {
+    allRecordsFlat.forEach(record => {
         const block = record.REG.charAt(0);
-        if (!blockCounters[block]) {
-            blockCounters[block] = 0;
-        }
-        blockCounters[block]++;
-    }
-    
-    // Update counter records (e.g., 0990, 9900) with the new counts
+        blockCounters[block] = (blockCounters[block] || 0) + 1;
+    });
+
+    // Generate the final list for export, updating counter records with correct values.
     const finalRecordsList = allRecordsFlat.map(record => {
         const newRecord = { ...record };
         const reg = newRecord.REG;
@@ -274,7 +323,7 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
         
         return newRecord;
     });
-
+    
     let efdText = '';
     for (const record of finalRecordsList) {
         const headers = RECORD_DEFINITIONS[record.REG];
