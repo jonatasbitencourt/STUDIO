@@ -229,7 +229,7 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
     // Step 1: Get all records from state, and separate original from new.
     const allRecords = Object.values(records).flat();
     let finalExportList = allRecords.filter(r => r._order !== undefined)
-                                      .sort((a, b) => r._order! - b._order!);
+                                      .sort((a, b) => a._order! - b._order!);
     const newRecords = allRecords.filter(r => r._order === undefined);
 
     // Step 2: Insert new records into the list at logical positions.
