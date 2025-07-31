@@ -99,7 +99,7 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   'D309': ['REG', 'NUM_PROC', 'IND_PROC'],
   'D350': ['REG', 'COD_MOD', 'ECF_MOD', 'ECF_FAB', 'ECF_CX', 'DT_DOC', 'CRO', 'CRZ', 'NUM_COO_INI', 'NUM_COO_FIN', 'VL_BRT', 'VL_ISS', 'VL_PIS', 'VL_COFINS', 'VL_ISENTOS', 'VL_NAO_TRIB', 'VL_CANC', 'VL_DESC', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS_APUR', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS_APUR', 'COD_CTA'],
   'D359': ['REG', 'NUM_PROC', 'IND_PROC'],
-  'D500': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'SUB', 'NUM_DOC', 'DT_DOC', 'DT_A_P', 'VL_DOC', 'VL_ICMS', 'COD_INF', 'VL_PIS', 'VL_COFINS'],
+  'D500': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'SUB', 'NUM_DOC', 'DT_DOC', 'DT_A_P', 'VL_DOC', 'VL_ICMS', 'COD_INF', 'VL_PIS', 'VL_COFINS', 'IND_PGTO', 'VL_DESC', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS'],
   'D501': ['REG', 'CST_PIS', 'VL_ITEM', 'NAT_BC_CRED', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'COD_CTA'],
   'D505': ['REG', 'CST_COFINS', 'VL_ITEM', 'NAT_BC_CRED', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA'],
   'D509': ['REG', 'NUM_PROC', 'IND_PROC'],
@@ -342,11 +342,7 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
         const headers = RECORD_DEFINITIONS[reg];
         if (!headers) continue;
         
-        // ERROR CORRECTION 2: Ensure D500 has exactly 22 fields
-        let fieldsToJoin = headers.map(field => newRecord[field] || '');
-        if (reg === 'D500') {
-            fieldsToJoin = fieldsToJoin.slice(0, 22);
-        }
+        const fieldsToJoin = headers.map(field => newRecord[field] || '');
         
         const line = fieldsToJoin.join('|');
         efdText += `|${line}|\n`;
@@ -551,3 +547,6 @@ export const parseEfdFile = async (content: string): Promise<ParsedEfdData> => {
 
 
 
+
+
+    
