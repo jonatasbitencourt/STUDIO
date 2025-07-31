@@ -27,7 +27,7 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   '0208': ['REG', 'COD_TAB', 'COD_GRUPO'],
   '0400': ['REG', 'COD_NAT', 'DESCR_NAT'],
   '0450': ['REG', 'COD_INF', 'DESCR_INF'],
-  '0500': ['REG', 'DT_ALT', 'COD_NAT_CC', 'IND_CTA', 'NÍVEL', 'COD_CTA', 'NOME_CTA', 'COD_CTA_REF', 'CNPJ_EST'],
+  '0500': ['REG', 'DT_ALT', 'COD_NAT_CC', 'IND_CTA', 'NIVEL', 'COD_CTA', 'NOME_CTA', 'COD_CTA_REF', 'CNPJ_EST'],
   '0600': ['REG', 'DT_ALT', 'COD_CCUS', 'CCUS'],
   '0990': ['REG', 'QTD_LIN_0'],
   'A001': ['REG', 'IND_MOV'],
@@ -99,7 +99,7 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   'D309': ['REG', 'NUM_PROC', 'IND_PROC'],
   'D350': ['REG', 'COD_MOD', 'ECF_MOD', 'ECF_FAB', 'ECF_CX', 'DT_DOC', 'CRO', 'CRZ', 'NUM_COO_INI', 'NUM_COO_FIN', 'VL_BRT', 'VL_ISS', 'VL_PIS', 'VL_COFINS', 'VL_ISENTOS', 'VL_NAO_TRIB', 'VL_CANC', 'VL_DESC', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS_APUR', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS_APUR', 'COD_CTA'],
   'D359': ['REG', 'NUM_PROC', 'IND_PROC'],
-  'D500': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'SUB', 'NUM_DOC', 'DT_DOC', 'DT_A_P', 'VL_DOC', 'VL_DESC', 'VL_SERV', 'VL_SERV_NT', 'VL_TERC', 'VL_DA', 'VL_BC_ICMS', 'VL_ICMS', 'COD_INF',  'VL_PIS', 'VL_COFINS'],
+  'D500': ['REG', 'IND_OPER', 'IND_EMIT', 'COD_PART', 'COD_MOD', 'COD_SIT', 'SER', 'SUB', 'NUM_DOC', 'DT_DOC', 'DT_A_P', 'VL_DOC', 'VL_DESC', 'VL_SERV', 'VL_SERV_NT', 'VL_TERC', 'VL_DA', 'VL_BC_ICMS', 'VL_ICMS', 'COD_INF', 'VL_PIS', 'VL_COFINS'],
   'D501': ['REG', 'CST_PIS', 'VL_ITEM', 'NAT_BC_CRED', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'COD_CTA'],
   'D505': ['REG', 'CST_COFINS', 'VL_ITEM', 'NAT_BC_CRED', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA'],
   'D509': ['REG', 'NUM_PROC', 'IND_PROC'],
@@ -334,7 +334,7 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
             newRecord.QTD_LIN = String(finalExportList.length);
         }
         
-        // ERROR CORRECTION 1: Truncate A170->DESCR_COMPL
+        // ERROR CORRECTION: Truncate A170->DESCR_COMPL
         if (reg === 'A170' && typeof newRecord.DESCR_COMPL === 'string') {
             newRecord.DESCR_COMPL = newRecord.DESCR_COMPL.substring(0, 50);
         }
@@ -552,4 +552,5 @@ export const parseEfdFile = async (content: string): Promise<ParsedEfdData> => {
     
 
     
+
 
