@@ -22,6 +22,9 @@ interface RecordDataViewProps {
 const RECORDS_PER_PAGE = 200;
 
 const BATCH_ADD_CONFIG: Record<string, { headers: string[] }> = {
+    '0500': {
+        headers: ['DT_ALT', 'COD_NAT_CC', 'IND_CTA', 'NIVEL', 'COD_CTA', 'NOME_CTA', 'COD_CTA_REF', 'CNPJ_EST']
+    },
     'F700': {
         headers: ['IND_ORI_DED', 'IND_NAT_DED', 'VL_DED_PIS', 'VL_DED_COFINS', 'VL_BC_OPER', 'CNPJ', 'INFO_COMPL']
     },
