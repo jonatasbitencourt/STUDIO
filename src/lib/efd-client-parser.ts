@@ -234,7 +234,7 @@ const createRecord = (fields: string[], headers: string[], parentId?: string, cn
 export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }): void => {
     const allRecords = Object.values(records).flat();
     let finalExportList = allRecords.filter(r => r._order !== undefined)
-                                      .sort((a, b) => a._order! - b._order!);
+                                      .sort((a, b) => (a._order as number) - (b._order as number));
     const newRecords = allRecords.filter(r => r._order === undefined);
 
     if (newRecords.length > 0) {
@@ -547,4 +547,3 @@ export const parseEfdFile = async (content: string): Promise<ParsedEfdData> => {
     ...summaries,
   };
 };
-    

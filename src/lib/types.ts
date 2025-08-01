@@ -3,7 +3,7 @@ export type EfdRecord = {
   _parentId?: string; // ID of the parent record for hierarchical data
   _cnpj?: string; // Internal property to associate record with a CNPJ
   _order?: number; // Original line order from the imported file
-  [key: string]: string | number;
+  [key: string]: string | number | undefined;
 };
 
 export type OperationSummaryItem = {
