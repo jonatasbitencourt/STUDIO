@@ -6,8 +6,15 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "frameworksBackend": {
-      "region": "us-east1"
-    }
+    "appAssociation": "AUTO",
+    "rewrites": [
+      {
+        "source": "**",
+        "apphosting": {
+          "backendId": "{{apphosting-backend-id}}",
+          "region": "us-east1"
+        }
+      }
+    ]
   }
 }
