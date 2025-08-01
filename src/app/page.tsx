@@ -26,6 +26,11 @@ export default function Home() {
   const [activeView, setActiveView] = useState<'entradas' | 'saidas' | 'apuracao_pis' | 'apuracao_cofins' | 'estabelecimentos' | null>('entradas');
   const [selectedCnpj, setSelectedCnpj] = useState<string>('all');
   const { toast } = useToast();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!allData) return;
@@ -455,7 +460,7 @@ export default function Home() {
               </div>
             </div>
             
-            {selectedRecord ? (
+            {isMounted && selectedRecord ? (
               <RecordDataView
                 key={`${selectedCnpj}-${selectedRecord}`}
                 recordType={selectedRecord}
@@ -463,7 +468,7 @@ export default function Home() {
                 onRecordsUpdate={handleRecordsUpdate}
                 onRecordDelete={handleRecordDelete}
               />
-            ) : (
+            ) : isMounted && (
               <>
                 {activeView === 'estabelecimentos' && allData && (
                    <RecordDataView
