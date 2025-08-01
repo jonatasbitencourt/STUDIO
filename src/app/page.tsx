@@ -52,8 +52,8 @@ export default function Home() {
 
                 recordsOfType.forEach(r => {
                     if (r._cnpj === selectedCnpj) {
-                        if (r.COD_ITEM) relevantItemCodes.add(r.COD_ITEM);
-                        if (r.COD_PART) relevantParticipantCodes.add(r.COD_PART);
+                        if (r.COD_ITEM) relevantItemCodes.add(String(r.COD_ITEM));
+                        if (r.COD_PART) relevantParticipantCodes.add(String(r.COD_PART));
                     }
                 });
             }
@@ -68,9 +68,9 @@ export default function Home() {
                 let kept: EfdRecord[];
 
                 if (type === '0150') {
-                    kept = recordsOfType.filter(r => relevantParticipantCodes.has(r.COD_PART!));
+                    kept = recordsOfType.filter(r => relevantParticipantCodes.has(String(r.COD_PART!)));
                 } else if (type === '0200') {
-                    kept = recordsOfType.filter(r => relevantItemCodes.has(r.COD_ITEM!));
+                    kept = recordsOfType.filter(r => relevantItemCodes.has(String(r.COD_ITEM!)));
                 } else {
                     // Default behavior: keep records that are for the selected CNPJ, or are truly global (no _cnpj property)
                     kept = recordsOfType.filter(r => !r.hasOwnProperty('_cnpj') || r._cnpj === selectedCnpj);
@@ -437,7 +437,7 @@ export default function Home() {
                       <SelectContent>
                         <SelectItem value="all">Todos os Estabelecimentos</SelectItem>
                         {establishmentRecords.map((est) => (
-                          <SelectItem key={est.CNPJ} value={est.CNPJ!}>
+                          <SelectItem key={String(est.CNPJ)} value={String(est.CNPJ!)}>
                             {`${est.NOME} (${est.CNPJ})`}
                           </SelectItem>
                         ))}
