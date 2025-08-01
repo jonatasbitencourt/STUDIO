@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
 import type { ParsedEfdData, EfdRecord } from '@/lib/types';
-import { parseEfdFile, recalculateSummaries, exportRecordsToEfdText } from '@/lib/efd-parser';
+import { parseEfdFile, recalculateSummaries, exportRecordsToEfdText } from '@/lib/efd-client-parser';
 import { useToast } from "@/hooks/use-toast";
 
 import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator, SidebarFooter } from '@/components/ui/sidebar';
