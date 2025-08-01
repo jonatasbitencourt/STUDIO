@@ -32,91 +32,6 @@ export default function Home() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
-  
-  const handleFilterChange = useCallback(async (cnpj: string) => {
-    setSelectedCnpj(cnpj);
-    if (!allData) return;
-
-    setIsProcessing(true);
-    try {
-        if (cnpj === 'all') {
-            const newSummaries = await recalculateSummaries(allData.records);
-            setData({
-              records: allData.records,
-              ...newSummaries
-            });
-            if(selectedRecord && !canRecordTypeBeFiltered(selectedRecord, true)) {
-              setSelectedRecord(null);
-              setActiveView('entradas');
-            }
-            return;
-        }
-
-        const relevantItemCodes = new Set<string>();
-        const relevantParticipantCodes = new Set<string>();
-
-        for (const type in allData.records) {
-            const recordsOfType = allData.records[type];
-            if (!recordsOfType) continue;
-
-            recordsOfType.forEach(r => {
-                if (r._cnpj === cnpj) {
-                    if (r.COD_ITEM) relevantItemCodes.add(String(r.COD_ITEM));
-                    if (r.COD_PART) relevantParticipantCodes.add(String(r.COD_PART));
-                }
-            });
-        }
-
-        const newRecords: { [key: string]: EfdRecord[] } = {};
-
-        for (const type in allData.records) {
-            const recordsOfType = allData.records[type];
-            if (!recordsOfType || recordsOfType.length === 0) continue;
-
-            let kept: EfdRecord[];
-
-            if (type === '0150') {
-                kept = recordsOfType.filter(r => relevantParticipantCodes.has(String(r.COD_PART!)));
-            } else if (type === '0200') {
-                kept = recordsOfType.filter(r => relevantItemCodes.has(String(r.COD_ITEM!)));
-            } else {
-                kept = recordsOfType.filter(r => !r.hasOwnProperty('_cnpj') || r._cnpj === cnpj);
-            }
-            
-            if (kept.length > 0) {
-                newRecords[type] = kept;
-            }
-        }
-
-        ['A', 'C', 'D', 'F', 'I', 'M', 'P'].forEach(block => {
-            const openerType = `${block}001`;
-            const originalOpener = allData.records[openerType]?.[0];
-
-            if (originalOpener) {
-                const hasData = Object.keys(newRecords).some(type => type.startsWith(block) && type !== openerType);
-                if (newRecords[openerType]) {
-                  newRecords[openerType] = [{ ...newRecords[openerType][0], IND_MOV: hasData ? '0' : '1' }];
-                } else if (allData.records[openerType]) {
-                  newRecords[openerType] = [{ ...allData.records[openerType][0], IND_MOV: hasData ? '0' : '1' }];
-                }
-            }
-        });
-
-        const newSummaries = await recalculateSummaries(newRecords);
-
-        setData({
-            records: newRecords,
-            ...newSummaries,
-        });
-
-        if (selectedRecord && !newRecords[selectedRecord]) {
-          setSelectedRecord(null);
-          setActiveView('entradas');
-        }
-    } finally {
-        setIsProcessing(false);
-    }
-  }, [allData, selectedRecord]);
 
   const handleFileRead = useCallback(async (content: string) => {
     if (!content) {
@@ -146,6 +61,114 @@ export default function Home() {
       setIsProcessing(false);
     }
   }, [toast]);
+  
+  const canRecordTypeBeFiltered = useCallback((recordType: string | null, isForCheck = false) => {
+    if (!allData) return false;
+    const view = isForCheck ? activeView : null;
+    if (!recordType) {
+      if (view === 'apuracao_pis' || view === 'apuracao_cofins') {
+        return false;
+      }
+      return true;
+    }
+    
+    if (!allData.records[recordType]) return false;
+
+    if (recordType === '0150' || recordType === '0200' || recordType === '0140') return true;
+
+    return allData.records[recordType].some(r => r.hasOwnProperty('_cnpj'));
+  }, [allData, activeView]);
+
+  const filterAndSetData = useCallback((cnpj: string, currentAllData: ParsedEfdData, currentSelectedRecord: string | null) => {
+      if (!currentAllData) return;
+  
+      setIsProcessing(true);
+  
+      if (cnpj === 'all') {
+          recalculateSummaries(currentAllData.records).then(newSummaries => {
+              setData({
+                  records: currentAllData.records,
+                  ...newSummaries
+              });
+              if (currentSelectedRecord && !canRecordTypeBeFiltered(currentSelectedRecord, true)) {
+                  setSelectedRecord(null);
+                  setActiveView('entradas');
+              }
+              setIsProcessing(false);
+          });
+          return;
+      }
+  
+      const relevantItemCodes = new Set<string>();
+      const relevantParticipantCodes = new Set<string>();
+  
+      for (const type in currentAllData.records) {
+          const recordsOfType = currentAllData.records[type];
+          if (!recordsOfType) continue;
+  
+          recordsOfType.forEach(r => {
+              if (r._cnpj === cnpj) {
+                  if (r.COD_ITEM) relevantItemCodes.add(String(r.COD_ITEM));
+                  if (r.COD_PART) relevantParticipantCodes.add(String(r.COD_PART));
+              }
+          });
+      }
+  
+      const newRecords: { [key: string]: EfdRecord[] } = {};
+  
+      for (const type in currentAllData.records) {
+          const recordsOfType = currentAllData.records[type];
+          if (!recordsOfType || recordsOfType.length === 0) continue;
+  
+          let kept: EfdRecord[];
+  
+          if (type === '0150') {
+              kept = recordsOfType.filter(r => relevantParticipantCodes.has(String(r.COD_PART!)));
+          } else if (type === '0200') {
+              kept = recordsOfType.filter(r => relevantItemCodes.has(String(r.COD_ITEM!)));
+          } else {
+              kept = recordsOfType.filter(r => !r.hasOwnProperty('_cnpj') || r._cnpj === cnpj);
+          }
+  
+          if (kept.length > 0) {
+              newRecords[type] = kept;
+          }
+      }
+  
+      ['A', 'C', 'D', 'F', 'I', 'M', 'P'].forEach(block => {
+          const openerType = `${block}001`;
+          const originalOpener = currentAllData.records[openerType]?.[0];
+  
+          if (originalOpener) {
+              const hasData = Object.keys(newRecords).some(type => type.startsWith(block) && type !== openerType);
+              if (newRecords[openerType]) {
+                  newRecords[openerType] = [{ ...newRecords[openerType][0], IND_MOV: hasData ? '0' : '1' }];
+              } else if (currentAllData.records[openerType]) {
+                  newRecords[openerType] = [{ ...currentAllData.records[openerType][0], IND_MOV: hasData ? '0' : '1' }];
+              }
+          }
+      });
+  
+      recalculateSummaries(newRecords).then(newSummaries => {
+          setData({
+              records: newRecords,
+              ...newSummaries,
+          });
+  
+          if (currentSelectedRecord && !newRecords[currentSelectedRecord]) {
+              setSelectedRecord(null);
+              setActiveView('entradas');
+          }
+          setIsProcessing(false);
+      });
+  }, [canRecordTypeBeFiltered]);
+  
+  const handleFilterChange = (cnpj: string) => {
+    setSelectedCnpj(cnpj);
+    if (allData) {
+      filterAndSetData(cnpj, allData, selectedRecord);
+    }
+  };
 
   const handleReset = useCallback(() => {
     setAllData(null);
@@ -185,11 +208,11 @@ export default function Home() {
         
         const newData = { ...prevAllData, records: newAllDataRecords };
         
-        handleFilterChange(selectedCnpj);
+        filterAndSetData(selectedCnpj, newData, selectedRecord);
 
         return newData;
     });
-  }, [selectedCnpj, handleFilterChange]);
+  }, [selectedCnpj, selectedRecord, filterAndSetData]);
 
   const handleRecordDelete = useCallback((recordToDelete: EfdRecord) => {
     if (!recordToDelete._id) return;
@@ -224,11 +247,11 @@ export default function Home() {
         
         const newData = { ...prevAllData, records: newAllDataRecords };
         
-        handleFilterChange(selectedCnpj);
+        filterAndSetData(selectedCnpj, newData, selectedRecord);
 
         return newData;
     });
-  }, [selectedCnpj, handleFilterChange]);
+  }, [selectedCnpj, selectedRecord, filterAndSetData]);
 
   const handleExport = useCallback(() => {
     if (!data) {
@@ -257,22 +280,6 @@ export default function Home() {
 
   const establishmentRecords = useMemo(() => allData?.records['0140'] || [], [allData]);
   
-  const canRecordTypeBeFiltered = useCallback((recordType: string | null, isForCheck = false) => {
-    const view = isForCheck ? activeView : null;
-    if (!recordType) {
-      if (view === 'apuracao_pis' || view === 'apuracao_cofins') {
-        return false;
-      }
-      return true;
-    }
-    
-    if (!allData?.records[recordType]) return false;
-
-    if (recordType === '0150' || recordType === '0200' || recordType === '0140') return true;
-
-    return allData.records[recordType].some(r => r.hasOwnProperty('_cnpj'));
-  }, [allData, activeView]);
-
   const showCnpjFilter = useMemo(() => {
     if (!data || establishmentRecords.length <= 1) return false;
     
@@ -435,7 +442,7 @@ export default function Home() {
         <SidebarHeader className="p-4">
           <AppLogo />
         </SidebarHeader>
-        {isMounted && data && !isProcessing && sidebarContent}
+        {sidebarContent}
         <SidebarFooter className="p-4 mt-auto">
           <p className="text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
             Developed by Jonatas Bitencourt
@@ -452,7 +459,7 @@ export default function Home() {
 
         {!data && !isProcessing && (
           <div className="flex items-center justify-center h-full">
-            <FileUploader onFileRead={handleFileRead} onProcessing={() => {}} />
+            <FileUploader onFileRead={handleFileRead} onProcessing={setIsProcessing} />
           </div>
         )}
         
@@ -525,3 +532,5 @@ export default function Home() {
     </SidebarProvider>
   );
 }
+
+    
