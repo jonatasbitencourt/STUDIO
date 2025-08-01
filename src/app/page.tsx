@@ -230,7 +230,7 @@ export default function Home() {
             for (const child of children) {
                 if(child._id) {
                   idsToDelete.add(child._id);
-                  if (recordHierarchy[child.REG]) {
+                  if (recordHierarchy[String(child.REG)]) {
                       queue.push(child._id);
                   }
                 }
@@ -470,7 +470,7 @@ export default function Home() {
                  <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
                  {showCnpjFilter && (
                     <p className="text-sm text-muted-foreground">
-                        {selectedCnpj === 'all' ? 'Exibindo todos os estabelecimentos' : `Exibindo dados para: ${establishmentRecords.find(e => e.CNPJ === selectedCnpj)?.NOME || selectedCnpj}`}
+                        {selectedCnpj === 'all' ? 'Exibindo todos os estabelecimentos' : `Exibindo dados para: ${establishmentRecords.find(e => String(e.CNPJ) === selectedCnpj)?.NOME || selectedCnpj}`}
                     </p>
                  )}
                </div>
