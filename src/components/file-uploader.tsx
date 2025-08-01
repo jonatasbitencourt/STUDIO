@@ -55,7 +55,7 @@ export function FileUploader({ onFileRead, onProcessing }: FileUploaderProps) {
     }
   }, [onFileRead, onProcessing, toast]);
 
-  const onDrop = useCallback((event: React.DragEvent<HTMLDivElement>) => {
+  const onDrop = useCallback((event: React.DragEvent<HTMLLabelElement>) => {
     event.preventDefault();
     if (event.dataTransfer.files && event.dataTransfer.files.length > 0) {
       handleFile(event.dataTransfer.files[0]);
@@ -63,7 +63,7 @@ export function FileUploader({ onFileRead, onProcessing }: FileUploaderProps) {
     }
   }, [handleFile]);
 
-  const onDragOver = (event: React.DragEvent<HTMLDivElement>) => {
+  const onDragOver = (event: React.DragEvent<HTMLLabelElement>) => {
     event.preventDefault();
   };
   
