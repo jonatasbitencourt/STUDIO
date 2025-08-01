@@ -52,10 +52,11 @@ export default function Home() {
       setSelectedCnpj('all');
     } catch(e) {
       console.error(e);
+      const errorMessage = e instanceof Error ? e.message : "Erro desconhecido";
       toast({
         variant: "destructive",
         title: "Erro de Análise",
-        description: "Não foi possível analisar o arquivo. Verifique o console para mais detalhes.",
+        description: `Não foi possível analisar o arquivo. Detalhes: ${errorMessage}`,
       });
     } finally {
       setIsProcessing(false);
