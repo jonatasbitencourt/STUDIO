@@ -33,50 +33,74 @@ export default function Home() {
     setIsMounted(true);
   }, []);
 
-  const handleFileRead = useCallback(async (content: string) => {
-    if (!content) {
+  const handleFileRead = useCallback((file: File) => {
+    if (!file) {
       toast({
         variant: "destructive",
-        title: "Erro ao ler arquivo",
-        description: "O arquivo parece estar vazio.",
+        title: "Nenhum arquivo selecionado",
+        description: "Por favor, selecione um arquivo para continuar.",
       });
       return;
     }
-    
+
     setIsProcessing(true);
-    
-    try {
-      // 1. Parse the file to get all records
-      const parsedRecords = await parseEfdFile(content);
 
-      // 2. Recalculate summaries based on the fresh records
-      const summaries = await recalculateSummaries(parsedRecords);
+    // Use setTimeout to allow the UI to update to the processing state
+    setTimeout(() => {
+      const reader = new FileReader();
 
-      // 3. Combine them into the final data object
-      const finalData = {
-          records: parsedRecords,
-          ...summaries
+      reader.onload = async (e) => {
+        const content = e.target?.result as string;
+
+        if (!content) {
+            toast({
+                variant: "destructive",
+                title: "Erro ao ler arquivo",
+                description: "O arquivo parece estar vazio.",
+            });
+            setIsProcessing(false);
+            return;
+        }
+
+        try {
+            const parsedRecords = await parseEfdFile(content);
+            const summaries = await recalculateSummaries(parsedRecords);
+
+            const finalData = {
+                records: parsedRecords,
+                ...summaries
+            };
+
+            setAllData(finalData);
+            setData(finalData);
+            setActiveView('entradas');
+            setSelectedRecord(null);
+            setSelectedCnpj('all');
+
+        } catch (err) {
+            console.error(err);
+            const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
+            toast({
+                variant: "destructive",
+                title: "Erro de Análise",
+                description: `Não foi possível analisar o arquivo. Verifique o formato e tente novamente. Detalhes: ${errorMessage}`,
+            });
+        } finally {
+            setIsProcessing(false);
+        }
       };
-      
-      // 4. Update all states in one go
-      setAllData(finalData);
-      setData(finalData);
-      setActiveView('entradas');
-      setSelectedRecord(null);
-      setSelectedCnpj('all');
 
-    } catch(e) {
-      console.error(e);
-      const errorMessage = e instanceof Error ? e.message : "Erro desconhecido";
-      toast({
-        variant: "destructive",
-        title: "Erro de Análise",
-        description: `Não foi possível analisar o arquivo. Verifique o formato e tente novamente. Detalhes: ${errorMessage}`,
-      });
-    } finally {
-      // 5. Ensure processing is always set to false
-      setIsProcessing(false);
-    }
+      reader.onerror = () => {
+          toast({
+              variant: "destructive",
+              title: "Erro de Leitura",
+              description: "Não foi possível ler o arquivo selecionado.",
+          });
+          setIsProcessing(false);
+      };
+
+      reader.readAsText(file, 'windows-1252');
+    }, 0);
   }, [toast]);
   
   const canRecordTypeBeFiltered = useCallback((recordType: string | null, isForCheck = false) => {
@@ -476,7 +500,7 @@ export default function Home() {
 
         {!data && !isProcessing && (
           <div className="flex items-center justify-center h-full">
-            <FileUploader onFileRead={handleFileRead} onProcessing={setIsProcessing} />
+            <FileUploader onFileRead={handleFileRead} />
           </div>
         )}
         

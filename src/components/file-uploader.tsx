@@ -6,15 +6,14 @@ import React, { useCallback, useState } from 'react';
 import { useToast } from "@/hooks/use-toast";
 
 interface FileUploaderProps {
-  onFileRead: (content: string) => Promise<void>;
-  onProcessing: (isProcessing: boolean) => void;
+  onFileRead: (file: File) => void;
 }
 
-export function FileUploader({ onFileRead, onProcessing }: FileUploaderProps) {
+export function FileUploader({ onFileRead }: FileUploaderProps) {
   const [fileName, setFileName] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const handleFile = useCallback(async (file: File | null) => {
+  const handleFile = useCallback((file: File | null) => {
     if (!file) return;
 
     if(file.type !== 'text/plain') {
@@ -27,38 +26,9 @@ export function FileUploader({ onFileRead, onProcessing }: FileUploaderProps) {
     }
 
     setFileName(file.name);
-    
-    // We don't set processing to true here. 
-    // The parent component (`page.tsx`) will be responsible for that
-    // *before* it starts the heavy lifting.
+    onFileRead(file);
 
-    const reader = new FileReader();
-    
-    reader.onload = async (e) => {
-      const text = e.target?.result as string;
-      try {
-          // Await the full processing from the parent.
-          await onFileRead(text);
-      } catch (error) {
-          // The parent's `try/catch` will handle the toast notifications.
-          // We just log it here for debugging.
-          console.error("Error passed to FileUploader:", error);
-      }
-    };
-    
-    reader.onerror = () => {
-      onProcessing(false); // Make sure to stop processing on a read error
-      toast({
-        variant: "destructive",
-        title: "Erro de Leitura",
-        description: "Não foi possível ler o arquivo selecionado.",
-      });
-      console.error("Failed to read file");
-    }
-
-    reader.readAsText(file, 'windows-1252');
-
-  }, [onFileRead, onProcessing, toast]);
+  }, [onFileRead, toast]);
 
   const onDrop = useCallback((event: React.DragEvent<HTMLLabelElement>) => {
     event.preventDefault();
