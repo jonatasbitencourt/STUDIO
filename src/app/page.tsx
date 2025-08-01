@@ -45,61 +45,65 @@ export default function Home() {
 
     setIsProcessing(true);
 
-    // Use setTimeout to allow the UI to update to the processing state
+    // Use setTimeout to ensure the UI updates to show "Processing..." before the heavy work begins.
     setTimeout(() => {
-      const reader = new FileReader();
+        const reader = new FileReader();
 
-      reader.onload = async (e) => {
-        const content = e.target?.result as string;
+        reader.onload = async (e) => {
+            const content = e.target?.result as string;
 
-        if (!content) {
+            if (!content) {
+                toast({
+                    variant: "destructive",
+                    title: "Erro ao ler arquivo",
+                    description: "O arquivo parece estar vazio ou não pôde ser lido.",
+                });
+                setIsProcessing(false);
+                return;
+            }
+
+            try {
+                const parsedRecords = await parseEfdFile(content);
+                if (Object.keys(parsedRecords).length === 0) {
+                  throw new Error("Nenhum registro válido encontrado no arquivo.");
+                }
+
+                const summaries = await recalculateSummaries(parsedRecords);
+
+                const finalData = {
+                    records: parsedRecords,
+                    ...summaries
+                };
+
+                setAllData(finalData);
+                setData(finalData);
+                setActiveView('entradas');
+                setSelectedRecord(null);
+                setSelectedCnpj('all');
+
+            } catch (err) {
+                console.error(err);
+                const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
+                toast({
+                    variant: "destructive",
+                    title: "Erro de Análise",
+                    description: `Não foi possível analisar o arquivo. Verifique o formato e tente novamente. Detalhes: ${errorMessage}`,
+                });
+            } finally {
+                setIsProcessing(false);
+            }
+        };
+
+        reader.onerror = () => {
             toast({
                 variant: "destructive",
-                title: "Erro ao ler arquivo",
-                description: "O arquivo parece estar vazio.",
+                title: "Erro de Leitura",
+                description: "Não foi possível ler o arquivo selecionado. Verifique as permissões do arquivo.",
             });
             setIsProcessing(false);
-            return;
-        }
+        };
 
-        try {
-            const parsedRecords = await parseEfdFile(content);
-            const summaries = await recalculateSummaries(parsedRecords);
-
-            const finalData = {
-                records: parsedRecords,
-                ...summaries
-            };
-
-            setAllData(finalData);
-            setData(finalData);
-            setActiveView('entradas');
-            setSelectedRecord(null);
-            setSelectedCnpj('all');
-
-        } catch (err) {
-            console.error(err);
-            const errorMessage = err instanceof Error ? err.message : "Erro desconhecido";
-            toast({
-                variant: "destructive",
-                title: "Erro de Análise",
-                description: `Não foi possível analisar o arquivo. Verifique o formato e tente novamente. Detalhes: ${errorMessage}`,
-            });
-        } finally {
-            setIsProcessing(false);
-        }
-      };
-
-      reader.onerror = () => {
-          toast({
-              variant: "destructive",
-              title: "Erro de Leitura",
-              description: "Não foi possível ler o arquivo selecionado.",
-          });
-          setIsProcessing(false);
-      };
-
-      reader.readAsText(file, 'windows-1252');
+        reader.readAsText(file, 'windows-1252');
     }, 0);
   }, [toast]);
   
@@ -573,3 +577,5 @@ export default function Home() {
     </SidebarProvider>
   );
 }
+
+    
