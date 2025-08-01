@@ -249,7 +249,7 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
 
         newRecords.forEach(newRec => {
             let insertionIndex = -1;
-            const parentType = childToParentMap[newRec.REG];
+            const parentType = childToParentMap[String(newRec.REG)];
 
             if (parentType) {
                 // It's a child record. Find the last occurrence of its parent or any of its siblings.
@@ -257,7 +257,7 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
                 familyTypes.add(parentType);
                 
                 for (let i = finalExportList.length - 1; i >= 0; i--) {
-                    if (familyTypes.has(finalExportList[i].REG)) {
+                    if (familyTypes.has(String(finalExportList[i].REG))) {
                         insertionIndex = i + 1; // Insert after the last known family member.
                         break;
                     }
@@ -267,14 +267,14 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
             // Fallback for non-child records or children whose parents aren't in the file.
             // Insert before the block's closing record.
             if (insertionIndex === -1) {
-                const block = newRec.REG.charAt(0);
+                const block = String(newRec.REG).charAt(0);
                 const closerReg = `${block}990`;
                 insertionIndex = finalExportList.findIndex(r => r.REG === closerReg);
 
                 // If no closer found (should not happen in a valid file), find the end of the block.
                 if (insertionIndex === -1) {
                     for (let i = finalExportList.length - 1; i >= 0; i--) {
-                        if (finalExportList[i].REG.charAt(0) === block) {
+                        if (String(finalExportList[i].REG).charAt(0) === block) {
                             insertionIndex = i + 1;
                             break;
                         }
@@ -284,7 +284,7 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
             
             // If still no index, something is very wrong. Place before block 9 as a last resort.
             if (insertionIndex === -1) {
-                insertionIndex = finalExportList.findIndex(r => r.REG.startsWith('9'));
+                insertionIndex = finalExportList.findIndex(r => String(r.REG).startsWith('9'));
                 if (insertionIndex === -1) {
                     insertionIndex = finalExportList.length;
                 }
@@ -303,12 +303,12 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
     // With the final, complete list, calculate all counters.
     const recordTypeCounters: { [key: string]: number } = {};
     finalExportList.forEach(record => {
-        recordTypeCounters[record.REG] = (recordTypeCounters[record.REG] || 0) + 1;
+        recordTypeCounters[String(record.REG)] = (recordTypeCounters[String(record.REG)] || 0) + 1;
     });
 
     const blockCounters: { [key: string]: number } = {};
     finalExportList.forEach(record => {
-        const block = record.REG.charAt(0);
+        const block = String(record.REG).charAt(0);
         blockCounters[block] = (blockCounters[block] || 0) + 1;
     });
     
@@ -316,7 +316,7 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
     let efdText = '';
     for (const record of finalExportList) {
         const newRecord = { ...record }; // Use a copy to avoid mutating state directly.
-        const reg = newRecord.REG;
+        const reg = String(newRecord.REG);
         
         // Update block totalizers (*990)
         if (reg.endsWith('990') && reg.length === 4) {
@@ -326,7 +326,7 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
         
         // Update specific record counters (9900)
         if (reg === '9900') {
-            const recordTypeToCount = newRecord.REG_BLC!;
+            const recordTypeToCount = String(newRecord.REG_BLC!);
             newRecord.QTD_REG_BLC = String(recordTypeCounters[recordTypeToCount] || 0);
         }
         
@@ -404,11 +404,11 @@ export const recalculateSummaries = async (records: { [key: string]: EfdRecord[]
     if (!parentDoc) continue;
 
     const direcao = parentDoc.IND_OPER === '0' ? 'ENTRADA' : 'SAIDA';
-    const cfop = item.CFOP || 'N/A';
-    const cstPis = item.CST_PIS || 'N/A';
-    const cstCofins = item.CST_COFINS || 'N/A';
-    const aliqPis = parseNumber(item.ALIQ_PIS);
-    const aliqCofins = parseNumber(item.ALIQ_COFINS);
+    const cfop = String(item.CFOP) || 'N/A';
+    const cstPis = String(item.CST_PIS) || 'N/A';
+    const cstCofins = String(item.CST_COFINS) || 'N/A';
+    const aliqPis = parseNumber(String(item.ALIQ_PIS));
+    const aliqCofins = parseNumber(String(item.ALIQ_COFINS));
     
     const key = `${direcao}-${cfop}-${cstPis}-${cstCofins}-${aliqPis}-${aliqCofins}`;
 
@@ -429,13 +429,13 @@ export const recalculateSummaries = async (records: { [key: string]: EfdRecord[]
       };
     }
 
-    summaryMap[key].vlr_tot += parseNumber(item.VL_ITEM);
-    summaryMap[key].vlr_icms += parseNumber(item.VL_ICMS);
-    summaryMap[key].vlr_st += parseNumber(item.VL_ICMS_ST);
-    summaryMap[key].vlr_ipi += parseNumber(item.VL_IPI);
-    summaryMap[key].vlr_pis += parseNumber(item.VL_PIS);
-    summaryMap[key].vlr_cofins += parseNumber(item.VL_COFINS);
-    summaryMap[key].vlr_bc_pis_cof += parseNumber(item.VL_BC_PIS) + parseNumber(item.VL_BC_COFINS);
+    summaryMap[key].vlr_tot += parseNumber(String(item.VL_ITEM));
+    summaryMap[key].vlr_icms += parseNumber(String(item.VL_ICMS));
+    summaryMap[key].vlr_st += parseNumber(String(item.VL_ICMS_ST));
+    summaryMap[key].vlr_ipi += parseNumber(String(item.VL_IPI));
+    summaryMap[key].vlr_pis += parseNumber(String(item.VL_PIS));
+    summaryMap[key].vlr_cofins += parseNumber(String(item.VL_COFINS));
+    summaryMap[key].vlr_bc_pis_cof += parseNumber(String(item.VL_BC_PIS)) + parseNumber(String(item.VL_BC_COFINS));
   }
 
   for (const key in summaryMap) {
@@ -450,36 +450,36 @@ export const recalculateSummaries = async (records: { [key: string]: EfdRecord[]
   const m200 = records['M200']?.[0];
   if (m200) {
       taxSummaryPis.push(
-          { atributo: 'Total Contribuição Não Cumulativa', valor: parseNumber(m200.VL_TOT_CONT_NC_PER) },
-          { atributo: 'Total Crédito Descontado', valor: parseNumber(m200.VL_TOT_CRED_DESC) },
-          { atributo: 'Total Crédito Descontado Anterior', valor: parseNumber(m200.VL_TOT_CRED_DESC_ANT) },
-          { atributo: 'Total Contribuição Não Cumulativa Devolvida', valor: parseNumber(m200.VL_TOT_CONT_NC_DEV) },
-          { atributo: 'Retenções Não Cumulativas', valor: parseNumber(m200.VL_RET_NC) },
-          { atributo: 'Outras Deduções Não Cumulativas', valor: parseNumber(m200.VL_OUT_DED_NC) },
-          { atributo: 'Contribuição Não Cumulativa a Recolher', valor: parseNumber(m200.VL_CONT_NC_REC) },
-          { atributo: 'Total Contribuição Cumulativa', valor: parseNumber(m200.VL_TOT_CONT_CUM_PER) },
-          { atributo: 'Retenções Cumulativas', valor: parseNumber(m200.VL_RET_CUM) },
-          { atributo: 'Outras Deduções Cumulativas', valor: parseNumber(m200.VL_OUT_DED_CUM) },
-          { atributo: 'Contribuição Cumulativa a Recolher', valor: parseNumber(m200.VL_CONT_CUM_REC) },
-          { atributo: 'Total Contribuição a Recolher', valor: parseNumber(m200.VL_TOT_CONT_REC) }
+          { atributo: 'Total Contribuição Não Cumulativa', valor: parseNumber(String(m200.VL_TOT_CONT_NC_PER)) },
+          { atributo: 'Total Crédito Descontado', valor: parseNumber(String(m200.VL_TOT_CRED_DESC)) },
+          { atributo: 'Total Crédito Descontado Anterior', valor: parseNumber(String(m200.VL_TOT_CRED_DESC_ANT)) },
+          { atributo: 'Total Contribuição Não Cumulativa Devolvida', valor: parseNumber(String(m200.VL_TOT_CONT_NC_DEV)) },
+          { atributo: 'Retenções Não Cumulativas', valor: parseNumber(String(m200.VL_RET_NC)) },
+          { atributo: 'Outras Deduções Não Cumulativas', valor: parseNumber(String(m200.VL_OUT_DED_NC)) },
+          { atributo: 'Contribuição Não Cumulativa a Recolher', valor: parseNumber(String(m200.VL_CONT_NC_REC)) },
+          { atributo: 'Total Contribuição Cumulativa', valor: parseNumber(String(m200.VL_TOT_CONT_CUM_PER)) },
+          { atributo: 'Retenções Cumulativas', valor: parseNumber(String(m200.VL_RET_CUM)) },
+          { atributo: 'Outras Deduções Cumulativas', valor: parseNumber(String(m200.VL_OUT_DED_CUM)) },
+          { atributo: 'Contribuição Cumulativa a Recolher', valor: parseNumber(String(m200.VL_CONT_CUM_REC)) },
+          { atributo: 'Total Contribuição a Recolher', valor: parseNumber(String(m200.VL_TOT_CONT_REC)) }
       );
   }
 
   const m600 = records['M600']?.[0];
   if (m600) {
       taxSummaryCofins.push(
-          { atributo: 'Total Contribuição Não Cumulativa', valor: parseNumber(m600.VL_TOT_CONT_NC_PER) },
-          { atributo: 'Total Crédito Descontado', valor: parseNumber(m600.VL_TOT_CRED_DESC) },
-          { atributo: 'Total Crédito Descontado Anterior', valor: parseNumber(m600.VL_TOT_CRED_DESC_ANT) },
-          { atributo: 'Total Contribuição Não Cumulativa Devolvida', valor: parseNumber(m600.VL_TOT_CONT_NC_DEV) },
-          { atributo: 'Retenções Não Cumulativas', valor: parseNumber(m600.VL_RET_NC) },
-          { atributo: 'Outras Deduções Não Cumulativas', valor: parseNumber(m600.VL_OUT_DED_NC) },
-          { atributo: 'Contribuição Não Cumulativa a Recolher', valor: parseNumber(m600.VL_CONT_NC_REC) },
-          { atributo: 'Total Contribuição Cumulativa', valor: parseNumber(m600.VL_TOT_CONT_CUM_PER) },
-          { atributo: 'Retenções Cumulativas', valor: parseNumber(m600.VL_RET_CUM) },
-          { atributo: 'Outras Deduções Cumulativas', valor: parseNumber(m600.VL_OUT_DED_CUM) },
-          { atributo: 'Contribuição Cumulativa a Recolher', valor: parseNumber(m600.VL_CONT_CUM_REC) },
-          { atributo: 'Total Contribuição a Recolher', valor: parseNumber(m600.VL_TOT_CONT_REC) }
+          { atributo: 'Total Contribuição Não Cumulativa', valor: parseNumber(String(m600.VL_TOT_CONT_NC_PER)) },
+          { atributo: 'Total Crédito Descontado', valor: parseNumber(String(m600.VL_TOT_CRED_DESC)) },
+          { atributo: 'Total Crédito Descontado Anterior', valor: parseNumber(String(m600.VL_TOT_CRED_DESC_ANT)) },
+          { atributo: 'Total Contribuição Não Cumulativa Devolvida', valor: parseNumber(String(m600.VL_TOT_CONT_NC_DEV)) },
+          { atributo: 'Retenções Não Cumulativas', valor: parseNumber(String(m600.VL_RET_NC)) },
+          { atributo: 'Outras Deduções Não Cumulativas', valor: parseNumber(String(m600.VL_OUT_DED_NC)) },
+          { atributo: 'Contribuição Não Cumulativa a Recolher', valor: parseNumber(String(m600.VL_CONT_NC_REC)) },
+          { atributo: 'Total Contribuição Cumulativa', valor: parseNumber(String(m600.VL_TOT_CONT_CUM_PER)) },
+          { atributo: 'Retenções Cumulativas', valor: parseNumber(String(m600.VL_RET_CUM)) },
+          { atributo: 'Outras Deduções Cumulativas', valor: parseNumber(String(m600.VL_OUT_DED_CUM)) },
+          { atributo: 'Contribuição Cumulativa a Recolher', valor: parseNumber(String(m600.VL_CONT_CUM_REC)) },
+          { atributo: 'Total Contribuição a Recolher', valor: parseNumber(String(m600.VL_TOT_CONT_REC)) }
       );
   }
 
@@ -514,7 +514,7 @@ export const parseEfdFile = async (content: string): Promise<ParsedEfdData> => {
     if (!headers) continue;
 
     // Manage parent stack for hierarchy
-    while (parentStack.length > 0 && !recordHierarchy[parentStack[parentStack.length - 1].REG]?.includes(recordType)) {
+    while (parentStack.length > 0 && !recordHierarchy[String(parentStack[parentStack.length - 1].REG)]?.includes(recordType)) {
         parentStack.pop();
     }
     const parentId = parentStack.length > 0 ? parentStack[parentStack.length - 1]._id : undefined;
