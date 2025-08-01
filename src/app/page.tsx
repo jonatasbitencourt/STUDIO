@@ -45,7 +45,6 @@ export default function Home() {
               records: allData.records,
               ...newSummaries
             });
-            // When switching back to "all", reset the view if the selected record doesn't make sense globally
             if(selectedRecord && !canRecordTypeBeFiltered(selectedRecord, true)) {
               setSelectedRecord(null);
               setActiveView('entradas');
@@ -186,8 +185,6 @@ export default function Home() {
         
         const newData = { ...prevAllData, records: newAllDataRecords };
         
-        // After updating allData, recalculate the current view (data)
-        // This is important because changes might affect summaries or filtered views
         handleFilterChange(selectedCnpj);
 
         return newData;
@@ -217,11 +214,11 @@ export default function Home() {
             }
         }
 
-        const newRecords: { [key: string]: EfdRecord[] } = {};
+        const newAllDataRecords: { [key: string]: EfdRecord[] } = {};
         for (const type in prevAllData.records) {
             const keptRecords = prevAllData.records[type].filter(r => r._id && !idsToDelete.has(r._id));
             if (keptRecords.length > 0) {
-                newRecords[type] = keptRecords;
+                newAllDataRecords[type] = keptRecords;
             }
         }
         
@@ -296,9 +293,10 @@ export default function Home() {
     return false;
   }, [data, establishmentRecords.length, selectedRecord, activeView, canRecordTypeBeFiltered]);
   
-  // Memoize sidebar content to prevent re-rendering unless data changes
   const sidebarContent = useMemo(() => {
-    if (!data) return null;
+    if (!isMounted || !data) {
+      return null;
+    }
 
     const allRecordTypes = Object.keys(data.records);
     const childRecords = new Set(Object.values(recordHierarchy).flat());
@@ -428,7 +426,7 @@ export default function Home() {
         </SidebarMenu>
       </SidebarContent>
     );
-  }, [data, activeView, selectedRecord, handleSelectView]);
+  }, [isMounted, data, activeView, selectedRecord, handleSelectView]);
 
 
   return (
@@ -527,5 +525,3 @@ export default function Home() {
     </SidebarProvider>
   );
 }
-
-    
