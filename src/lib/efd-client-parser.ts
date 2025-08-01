@@ -11,9 +11,9 @@ const parseNumber = (str: string | undefined): number => {
   return parseFloat(str.toString().replace(/\./g, '').replace(',', '.')) || 0;
 };
 
-// Custom random ID generator to avoid server-side crypto module issues.
-const generateId = () => {
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+const generateId = (): string => {
+    // A simple, non-crypto, but sufficient ID for client-side rendering keys.
+    return `id_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
 
 const RECORD_DEFINITIONS: { [key: string]: string[] } = {
@@ -492,7 +492,7 @@ export const recalculateSummaries = async (records: { [key: string]: EfdRecord[]
   };
 };
 
-export const parseEfdFile = async (content: string): Promise<ParsedEfdData> => {
+export const parseEfdFile = async (content: string): Promise<{ [key: string]: EfdRecord[] }> => {
   const lines = content.split('\n');
   const allRecords: { [key: string]: EfdRecord[] } = {};
 
@@ -500,6 +500,7 @@ export const parseEfdFile = async (content: string): Promise<ParsedEfdData> => {
   const parentStack: EfdRecord[] = [];
 
   for (let i = 0; i < lines.length; i++) {
+    // This is the key change: yield to the main thread every 500 lines.
     if (i % 500 === 0) {
       await yieldToMain();
     }
@@ -514,18 +515,15 @@ export const parseEfdFile = async (content: string): Promise<ParsedEfdData> => {
     const headers = RECORD_DEFINITIONS[recordType];
     if (!headers) continue;
 
-    // Manage parent stack for hierarchy
     while (parentStack.length > 0 && !recordHierarchy[String(parentStack[parentStack.length - 1].REG)]?.includes(recordType)) {
         parentStack.pop();
     }
     const parentId = parentStack.length > 0 ? parentStack[parentStack.length - 1]._id : undefined;
 
-    // Manage CNPJ context for Block 0, A, C, D, F, etc.
     if (recordType.endsWith('010')) {
         currentCnpj = fields[1];
     }
     
-    // For 0140, which defines establishments, associate its own CNPJ.
     const recordCnpj = recordType === '0140' ? fields[2] : currentCnpj;
     
     const record = createRecord(fields, headers, parentId, recordCnpj, i);
@@ -535,18 +533,10 @@ export const parseEfdFile = async (content: string): Promise<ParsedEfdData> => {
     }
     allRecords[recordType].push(record);
     
-    // If this record type can be a parent, push it to the stack
     if (recordHierarchy[recordType]) {
         parentStack.push(record);
     }
   }
 
-  const summaries = await recalculateSummaries(allRecords);
-
-  return {
-    records: allRecords,
-    ...summaries,
-  };
+  return allRecords;
 };
-
-    

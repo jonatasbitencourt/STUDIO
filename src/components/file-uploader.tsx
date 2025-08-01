@@ -1,3 +1,4 @@
+
 "use client";
 
 import { UploadCloud, FileText } from 'lucide-react';
@@ -14,45 +15,49 @@ export function FileUploader({ onFileRead, onProcessing }: FileUploaderProps) {
   const { toast } = useToast();
 
   const handleFile = useCallback(async (file: File | null) => {
-    if (file) {
-      if(file.type !== 'text/plain') {
-         toast({
-          variant: "destructive",
-          title: "Formato de arquivo inválido",
-          description: "Por favor, selecione um arquivo .txt.",
-        });
-        return;
-      }
+    if (!file) return;
 
-      onProcessing(true);
-      setFileName(file.name);
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const text = e.target?.result as string;
-        try {
-            await onFileRead(text);
-        } catch (error) {
-            console.error("Parsing error:", error);
-            toast({
-                variant: "destructive",
-                title: "Erro de Análise",
-                description: "Não foi possível analisar o arquivo. Verifique se o formato está correto.",
-            });
-        } finally {
-            onProcessing(false);
-        }
-      };
-      reader.onerror = () => {
-        onProcessing(false);
+    if(file.type !== 'text/plain') {
         toast({
-          variant: "destructive",
-          title: "Erro de Leitura",
-          description: "Não foi possível ler o arquivo selecionado.",
-        });
-        console.error("Failed to read file");
-      }
-      reader.readAsText(file, 'windows-1252');
+        variant: "destructive",
+        title: "Formato de arquivo inválido",
+        description: "Por favor, selecione um arquivo .txt.",
+      });
+      return;
     }
+
+    setFileName(file.name);
+    
+    // We don't set processing to true here. 
+    // The parent component (`page.tsx`) will be responsible for that
+    // *before* it starts the heavy lifting.
+
+    const reader = new FileReader();
+    
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      try {
+          // Await the full processing from the parent.
+          await onFileRead(text);
+      } catch (error) {
+          // The parent's `try/catch` will handle the toast notifications.
+          // We just log it here for debugging.
+          console.error("Error passed to FileUploader:", error);
+      }
+    };
+    
+    reader.onerror = () => {
+      onProcessing(false); // Make sure to stop processing on a read error
+      toast({
+        variant: "destructive",
+        title: "Erro de Leitura",
+        description: "Não foi possível ler o arquivo selecionado.",
+      });
+      console.error("Failed to read file");
+    }
+
+    reader.readAsText(file, 'windows-1252');
+
   }, [onFileRead, onProcessing, toast]);
 
   const onDrop = useCallback((event: React.DragEvent<HTMLLabelElement>) => {

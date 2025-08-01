@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { ParsedEfdData, EfdRecord } from '@/lib/types';
 import { parseEfdFile, recalculateSummaries, exportRecordsToEfdText } from '@/lib/efd-client-parser';
 import { useToast } from "@/hooks/use-toast";
@@ -42,23 +42,39 @@ export default function Home() {
       });
       return;
     }
+    
     setIsProcessing(true);
+    
     try {
-      const parsedData = await parseEfdFile(content);
-      setAllData(parsedData);
-      setData(parsedData);
+      // 1. Parse the file to get all records
+      const parsedRecords = await parseEfdFile(content);
+
+      // 2. Recalculate summaries based on the fresh records
+      const summaries = await recalculateSummaries(parsedRecords);
+
+      // 3. Combine them into the final data object
+      const finalData = {
+          records: parsedRecords,
+          ...summaries
+      };
+      
+      // 4. Update all states in one go
+      setAllData(finalData);
+      setData(finalData);
       setActiveView('entradas');
       setSelectedRecord(null);
       setSelectedCnpj('all');
+
     } catch(e) {
       console.error(e);
       const errorMessage = e instanceof Error ? e.message : "Erro desconhecido";
       toast({
         variant: "destructive",
         title: "Erro de Análise",
-        description: `Não foi possível analisar o arquivo. Detalhes: ${errorMessage}`,
+        description: `Não foi possível analisar o arquivo. Verifique o formato e tente novamente. Detalhes: ${errorMessage}`,
       });
     } finally {
+      // 5. Ensure processing is always set to false
       setIsProcessing(false);
     }
   }, [toast]);
@@ -80,88 +96,88 @@ export default function Home() {
     return allData.records[recordType].some(r => r.hasOwnProperty('_cnpj'));
   }, [allData, activeView]);
 
-  const filterAndSetData = useCallback((cnpj: string, currentAllData: ParsedEfdData, currentSelectedRecord: string | null) => {
+  const filterAndSetData = useCallback(async (cnpj: string, currentAllData: ParsedEfdData, currentSelectedRecord: string | null) => {
       if (!currentAllData) return;
   
       setIsProcessing(true);
   
-      if (cnpj === 'all') {
-          recalculateSummaries(currentAllData.records).then(newSummaries => {
-              setData({
-                  records: currentAllData.records,
-                  ...newSummaries
-              });
-              if (currentSelectedRecord && !canRecordTypeBeFiltered(currentSelectedRecord, true)) {
-                  setSelectedRecord(null);
-                  setActiveView('entradas');
-              }
-              setIsProcessing(false);
-          });
-          return;
+      try {
+        if (cnpj === 'all') {
+            const newSummaries = await recalculateSummaries(currentAllData.records);
+            setData({
+                records: currentAllData.records,
+                ...newSummaries
+            });
+            if (currentSelectedRecord && !canRecordTypeBeFiltered(currentSelectedRecord, true)) {
+                setSelectedRecord(null);
+                setActiveView('entradas');
+            }
+            return;
+        }
+    
+        const relevantItemCodes = new Set<string>();
+        const relevantParticipantCodes = new Set<string>();
+    
+        for (const type in currentAllData.records) {
+            const recordsOfType = currentAllData.records[type];
+            if (!recordsOfType) continue;
+    
+            recordsOfType.forEach(r => {
+                if (r._cnpj === cnpj) {
+                    if (r.COD_ITEM) relevantItemCodes.add(String(r.COD_ITEM));
+                    if (r.COD_PART) relevantParticipantCodes.add(String(r.COD_PART));
+                }
+            });
+        }
+    
+        const newRecords: { [key: string]: EfdRecord[] } = {};
+    
+        for (const type in currentAllData.records) {
+            const recordsOfType = currentAllData.records[type];
+            if (!recordsOfType || recordsOfType.length === 0) continue;
+    
+            let kept: EfdRecord[];
+    
+            if (type === '0150') {
+                kept = recordsOfType.filter(r => relevantParticipantCodes.has(String(r.COD_PART!)));
+            } else if (type === '0200') {
+                kept = recordsOfType.filter(r => relevantItemCodes.has(String(r.COD_ITEM!)));
+            } else {
+                kept = recordsOfType.filter(r => !r.hasOwnProperty('_cnpj') || r._cnpj === cnpj);
+            }
+    
+            if (kept.length > 0) {
+                newRecords[type] = kept;
+            }
+        }
+    
+        ['A', 'C', 'D', 'F', 'I', 'M', 'P'].forEach(block => {
+            const openerType = `${block}001`;
+            const originalOpener = currentAllData.records[openerType]?.[0];
+    
+            if (originalOpener) {
+                const hasData = Object.keys(newRecords).some(type => type.startsWith(block) && type !== openerType);
+                if (newRecords[openerType]) {
+                    newRecords[openerType] = [{ ...newRecords[openerType][0], IND_MOV: hasData ? '0' : '1' }];
+                } else if (currentAllData.records[openerType]) {
+                    newRecords[openerType] = [{ ...currentAllData.records[openerType][0], IND_MOV: hasData ? '0' : '1' }];
+                }
+            }
+        });
+    
+        const newSummaries = await recalculateSummaries(newRecords);
+        setData({
+            records: newRecords,
+            ...newSummaries,
+        });
+    
+        if (currentSelectedRecord && !newRecords[currentSelectedRecord]) {
+            setSelectedRecord(null);
+            setActiveView('entradas');
+        }
+      } finally {
+        setIsProcessing(false);
       }
-  
-      const relevantItemCodes = new Set<string>();
-      const relevantParticipantCodes = new Set<string>();
-  
-      for (const type in currentAllData.records) {
-          const recordsOfType = currentAllData.records[type];
-          if (!recordsOfType) continue;
-  
-          recordsOfType.forEach(r => {
-              if (r._cnpj === cnpj) {
-                  if (r.COD_ITEM) relevantItemCodes.add(String(r.COD_ITEM));
-                  if (r.COD_PART) relevantParticipantCodes.add(String(r.COD_PART));
-              }
-          });
-      }
-  
-      const newRecords: { [key: string]: EfdRecord[] } = {};
-  
-      for (const type in currentAllData.records) {
-          const recordsOfType = currentAllData.records[type];
-          if (!recordsOfType || recordsOfType.length === 0) continue;
-  
-          let kept: EfdRecord[];
-  
-          if (type === '0150') {
-              kept = recordsOfType.filter(r => relevantParticipantCodes.has(String(r.COD_PART!)));
-          } else if (type === '0200') {
-              kept = recordsOfType.filter(r => relevantItemCodes.has(String(r.COD_ITEM!)));
-          } else {
-              kept = recordsOfType.filter(r => !r.hasOwnProperty('_cnpj') || r._cnpj === cnpj);
-          }
-  
-          if (kept.length > 0) {
-              newRecords[type] = kept;
-          }
-      }
-  
-      ['A', 'C', 'D', 'F', 'I', 'M', 'P'].forEach(block => {
-          const openerType = `${block}001`;
-          const originalOpener = currentAllData.records[openerType]?.[0];
-  
-          if (originalOpener) {
-              const hasData = Object.keys(newRecords).some(type => type.startsWith(block) && type !== openerType);
-              if (newRecords[openerType]) {
-                  newRecords[openerType] = [{ ...newRecords[openerType][0], IND_MOV: hasData ? '0' : '1' }];
-              } else if (currentAllData.records[openerType]) {
-                  newRecords[openerType] = [{ ...currentAllData.records[openerType][0], IND_MOV: hasData ? '0' : '1' }];
-              }
-          }
-      });
-  
-      recalculateSummaries(newRecords).then(newSummaries => {
-          setData({
-              records: newRecords,
-              ...newSummaries,
-          });
-  
-          if (currentSelectedRecord && !newRecords[currentSelectedRecord]) {
-              setSelectedRecord(null);
-              setActiveView('entradas');
-          }
-          setIsProcessing(false);
-      });
   }, [canRecordTypeBeFiltered]);
   
   const handleFilterChange = (cnpj: string) => {
@@ -533,5 +549,3 @@ export default function Home() {
     </SidebarProvider>
   );
 }
-
-    
