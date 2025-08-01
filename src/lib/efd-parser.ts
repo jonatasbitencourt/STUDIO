@@ -9,6 +9,11 @@ const parseNumber = (str: string | undefined): number => {
   return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
 };
 
+// Custom random ID generator to avoid server-side crypto module issues.
+const generateId = () => {
+    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+}
+
 const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   '0000': ['REG', 'COD_VER', 'TIPO_ESCRIT', 'IND_SIT_ESP', 'NUM_REC_ANTERIOR', 'DT_INI', 'DT_FIN', 'NOME', 'CNPJ', 'UF', 'COD_MUN', 'SUFRAMA', 'IND_NAT_PJ', 'IND_ATIV'],
   '0001': ['REG', 'IND_MOV'],
@@ -214,7 +219,7 @@ const RECORD_DEFINITIONS: { [key: string]: string[] } = {
 
 const createRecord = (fields: string[], headers: string[], parentId?: string, cnpj?: string, order?: number): EfdRecord => {
   const record: EfdRecord = {
-    _id: self.crypto.randomUUID(),
+    _id: generateId(),
     ...(parentId && { _parentId: parentId }),
     ...(cnpj && { _cnpj: cnpj }),
     ...(order !== undefined && { _order: order }),
@@ -552,5 +557,7 @@ export const parseEfdFile = async (content: string): Promise<ParsedEfdData> => {
     
 
     
+
+
 
 
