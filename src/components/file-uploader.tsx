@@ -73,7 +73,7 @@ export function FileUploader({ onFileRead }: FileUploaderProps) {
             </div>
           )}
         </div>
-        <input id="file-upload" name="file-upload" type="file" className="sr-only" accept=".txt" onChange={onFileChange} />
+        <input id="file-upload" name="file-upload" type="file" className="sr-only" accept=".txt,text/plain" onChange={onFileChange} />
       </label>
     </div>
   );
