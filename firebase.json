@@ -6,12 +6,11 @@
       "**/.*",
       "**/node_modules/**"
     ],
-    "appAssociation": "AUTO",
     "rewrites": [
       {
         "source": "**",
-        "apphosting": {
-          "backendId": "{{apphosting-backend-id}}",
+        "run": {
+          "serviceId": "{{apphosting-backend-id}}",
           "region": "us-east1"
         }
       }
