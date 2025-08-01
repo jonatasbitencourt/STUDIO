@@ -16,7 +16,9 @@ export function FileUploader({ onFileRead }: FileUploaderProps) {
   const handleFile = useCallback((file: File | null) => {
     if (!file) return;
 
-    if(file.type !== 'text/plain') {
+    const isValid = file.type === 'text/plain' || file.name.endsWith('.txt') || !file.type;
+
+    if(!isValid) {
         toast({
         variant: "destructive",
         title: "Formato de arquivo inválido",
