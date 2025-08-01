@@ -6,8 +6,8 @@ import { recordHierarchy } from './efd-structure';
 const yieldToMain = () => new Promise(resolve => setTimeout(resolve, 0));
 
 const parseNumber = (str: string | undefined): number => {
-  if (!str) return 0;
-  return parseFloat(str.replace(/\./g, '').replace(',', '.')) || 0;
+  if (str === undefined || str === null || str === '') return 0;
+  return parseFloat(str.toString().replace(/\./g, '').replace(',', '.')) || 0;
 };
 
 // Custom random ID generator to avoid server-side crypto module issues.
@@ -399,7 +399,8 @@ export const recalculateSummaries = async (records: { [key: string]: EfdRecord[]
   const summaryMap: { [key: string]: OperationSummaryItem } = {};
 
   for (const item of c170Records) {
-    const parentDoc = c100Map.get(item._parentId!);
+    if(!item._parentId) continue;
+    const parentDoc = c100Map.get(item._parentId);
     if (!parentDoc) continue;
 
     const direcao = parentDoc.IND_OPER === '0' ? 'ENTRADA' : 'SAIDA';
@@ -546,3 +547,4 @@ export const parseEfdFile = async (content: string): Promise<ParsedEfdData> => {
     ...summaries,
   };
 };
+    

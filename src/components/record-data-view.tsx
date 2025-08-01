@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -52,7 +53,7 @@ const EditableRow = memo(function EditableRow({
   record: EfdRecord;
   headers: string[];
   onCommit: (updatedRecord: EfdRecord) => void;
-  onDelete: (recordId: string) => void;
+  onDelete: (record: EfdRecord) => void;
 }) {
   const [editedRecord, setEditedRecord] = useState(record);
   const rowRef = useRef<HTMLTableRowElement>(null);
@@ -75,6 +76,11 @@ const EditableRow = memo(function EditableRow({
       }
     }, 0);
   };
+  
+  const handleDeleteClick = useCallback(() => {
+    onDelete(record);
+  }, [record, onDelete]);
+
 
   return (
     <TableRow ref={rowRef}>
@@ -83,7 +89,7 @@ const EditableRow = memo(function EditableRow({
           variant="ghost"
           size="icon"
           className="h-auto w-auto p-0.5 text-destructive hover:bg-destructive/10"
-          onClick={() => onDelete(record._id!)}
+          onClick={handleDeleteClick}
         >
           <Trash2 className="h-3 w-3" />
           <span className="sr-only">Excluir</span>
@@ -140,27 +146,12 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
 
 
   const handleRowCommit = useCallback((updatedRecord: EfdRecord) => {
-      // Find the index of the record to update
-      const recordIndex = records.findIndex(r => r._id === updatedRecord._id);
-      if (recordIndex === -1) { // This is a new record
-          onRecordsUpdate([updatedRecord, ...records], recordType);
-          return;
-      }
+      onRecordsUpdate([updatedRecord], recordType);
+  }, [onRecordsUpdate, recordType]);
 
-      // Create a new list with the updated record
-      const updatedList = [...records];
-      updatedList[recordIndex] = updatedRecord;
-
-      // Pass the entire updated list to the parent
-      onRecordsUpdate(updatedList, recordType);
-  }, [records, onRecordsUpdate, recordType]);
-
-  const handleDeleteRow = useCallback((recordId: string) => {
-    const recordToDelete = records.find(r => r._id === recordId);
-    if (recordToDelete) {
-        onRecordDelete(recordToDelete);
-    }
-  }, [records, onRecordDelete]);
+  const handleDeleteRow = useCallback((recordToDelete: EfdRecord) => {
+     onRecordDelete(recordToDelete);
+  }, [onRecordDelete]);
 
   const handleAddRow = useCallback(() => {
     const newRecord: EfdRecord = { REG: recordType, _id: `new_${Date.now()}` };
@@ -174,8 +165,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
         });
     }
 
-    const updatedRecords = [newRecord, ...records];
-    onRecordsUpdate(updatedRecords, recordType);
+    onRecordsUpdate([newRecord], recordType);
   }, [records, onRecordsUpdate, recordType]);
 
 
@@ -203,13 +193,12 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
         return newRecord;
     });
 
-    const updatedRecordList = [...newRecords, ...records];
-    onRecordsUpdate(updatedRecordList, recordType);
+    onRecordsUpdate(newRecords, recordType);
 
     toast({ title: "Sucesso!", description: `${newRecords.length} registro(s) adicionado(s) com sucesso.` });
     setBatchAddText('');
     setIsBatchAddDialogOpen(false);
-  }, [batchAddText, recordType, records, onRecordsUpdate, toast]);
+  }, [batchAddText, recordType, onRecordsUpdate, toast]);
 
 
 
@@ -255,7 +244,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
             <Info className="mx-auto h-10 w-10"/>
             <div>
               <p className="font-semibold">Nenhum registro encontrado para {recordType}</p>
-              <p className="text-sm">Carregue um arquivo para visualizar os dados.</p>
+              <p className="text-sm">Carregue um arquivo ou adicione um novo registro.</p>
             </div>
              {showAddButton && (
                 <Button onClick={handleAddRow} className="shadow-neumo active:shadow-neumo-inset rounded-xl">
@@ -372,3 +361,4 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
     </Card>
   );
 }
+    
