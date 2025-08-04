@@ -45,6 +45,12 @@ const BATCH_ADD_CONFIG: Record<string, { headers: string[] }> = {
     'F700': {
         headers: ['IND_ORI_DED', 'IND_NAT_DED', 'VL_DED_PIS', 'VL_DED_COFINS', 'VL_BC_OPER', 'CNPJ', 'INF_COMPL']
     },
+    '1300': {
+      headers: ['IND_NAT_RET', 'PR_REC_RET', 'VL_RET_APU', 'VL_RET_DED', 'VL_RET_PER', 'VL_RET_DCOMP', 'SLD_RET']
+    },
+    '1700': {
+      headers: ['IND_NAT_RET', 'PR_REC_RET', 'VL_RET_APU', 'VL_RET_DED', 'VL_RET_PER', 'VL_RET_DCOMP', 'SLD_RET']
+    },
     'M110': {
         headers: ['IND_AJ', 'VL_AJ', 'COD_AJ', 'NUM_DOC', 'DESCR_AJ', 'DT_REF']
     },
@@ -293,10 +299,10 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
                       Nenhum registro encontrado para {recordType}. Adicione um novo registro ou cole do Excel.
                   </CardDescription>
               </CardHeader>
-              <CardContent className="flex-grow overflow-hidden">
+              <CardContent className="flex-grow">
                   <ScrollArea className="h-full">
                       <Table className="w-max">
-                          <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-10">
+                          <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-40">
                               <TableRow>
                                   <TableHead className="sticky left-0 bg-background z-30 h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">Ações</TableHead>
                                   {headers.map(header => (
@@ -400,7 +406,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
       <CardContent className="flex-grow">
         <ScrollArea className="h-full">
             <Table className="w-max">
-              <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-10">
+              <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-40">
                 <TableRow>
                   <TableHead className="sticky left-0 bg-background z-30 h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">Ações</TableHead>
                   {headers.map(header => (
@@ -458,6 +464,8 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
     </Card>
   );
 }
+    
+
     
 
     
