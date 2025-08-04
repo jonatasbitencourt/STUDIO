@@ -1,7 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { EfdRecord } from "@/lib/types";
 import { Info, ChevronLeft, ChevronRight, PlusCircle, Trash2, ClipboardPaste } from "lucide-react";
 import { useState, useEffect, useMemo, useCallback, useRef, memo } from 'react';
@@ -297,33 +296,31 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
   // New logic for empty state: Show table headers and add buttons
   if (records.length === 0 && paginatedRecords.length === 0) {
       return (
-          <Card className="shadow-neumo border-none rounded-2xl h-[calc(100vh-10rem)] flex flex-col">
+          <Card className="shadow-neumo border-none rounded-2xl flex flex-col max-h-[calc(100vh-12rem)]">
               <CardHeader>
                   <CardTitle>Dados do Registro: {recordType}</CardTitle>
                   <CardDescription>
                       Nenhum registro encontrado para {recordType}. Adicione um novo registro ou cole do Excel.
                   </CardDescription>
               </CardHeader>
-              <CardContent className="flex-grow">
-                  <ScrollArea className="h-full">
-                      <Table className="w-max">
-                          <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-40">
-                              <TableRow>
-                                  <TableHead className="sticky left-0 bg-background z-30 h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">Ações</TableHead>
-                                  {headers.map(header => (
-                                      <TableHead key={header} className="h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">{header}</TableHead>
-                                  ))}
-                              </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                              <TableRow>
-                                  <TableCell colSpan={headers.length + 1} className="h-24 text-center">
-                                      Nenhum registro.
-                                  </TableCell>
-                              </TableRow>
-                          </TableBody>
-                      </Table>
-                  </ScrollArea>
+              <CardContent className="flex-grow overflow-auto">
+                  <Table className="w-max">
+                      <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-40">
+                          <TableRow>
+                              <TableHead className="sticky left-0 bg-background z-30 h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">Ações</TableHead>
+                              {headers.map(header => (
+                                  <TableHead key={header} className="h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">{header}</TableHead>
+                              ))}
+                          </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                          <TableRow>
+                              <TableCell colSpan={headers.length + 1} className="h-24 text-center">
+                                  Nenhum registro.
+                              </TableCell>
+                          </TableRow>
+                      </TableBody>
+                  </Table>
               </CardContent>
               <CardFooter className="border-t pt-4 justify-end items-center">
                   <div className="flex items-center space-x-2">
@@ -366,7 +363,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
   }
 
   return (
-    <Card className="shadow-neumo border-none rounded-2xl h-[calc(100vh-10rem)] flex flex-col">
+    <Card className="shadow-neumo border-none rounded-2xl flex flex-col max-h-[calc(100vh-12rem)]">
       <CardHeader>
         <div className="flex justify-between items-start gap-4">
             <div>
@@ -408,30 +405,28 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
             </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-grow">
-        <ScrollArea className="h-full">
-            <Table className="w-max">
-              <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-40">
-                <TableRow>
-                  <TableHead className="sticky left-0 bg-background z-30 h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">Ações</TableHead>
-                  {headers.map(header => (
-                    <TableHead key={header} className="h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">{header}</TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedRecords.map((record) => (
-                  <EditableRow
-                    key={record._id}
-                    record={record}
-                    headers={headers}
-                    onCommit={handleRowCommit}
-                    onDelete={handleDeleteRow}
-                  />
+      <CardContent className="flex-grow overflow-auto p-0">
+          <Table className="w-max relative">
+            <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-40">
+              <TableRow>
+                <TableHead className="sticky left-0 bg-background z-30 h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">Ações</TableHead>
+                {headers.map(header => (
+                  <TableHead key={header} className="h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">{header}</TableHead>
                 ))}
-              </TableBody>
-            </Table>
-        </ScrollArea>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginatedRecords.map((record) => (
+                <EditableRow
+                  key={record._id}
+                  record={record}
+                  headers={headers}
+                  onCommit={handleRowCommit}
+                  onDelete={handleDeleteRow}
+                />
+              ))}
+            </TableBody>
+          </Table>
       </CardContent>
        <CardFooter className="border-t pt-4 justify-between items-center">
         <p className="text-sm text-muted-foreground">
