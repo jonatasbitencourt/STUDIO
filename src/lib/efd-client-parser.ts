@@ -228,10 +228,10 @@ const createRecord = (fields: string[], headers: string[], parentId?: string, cn
     ...(order !== undefined && { _order: order }),
   };
   headers.forEach((header, index) => {
-    // For F100, F120, and F600, the last header is a temporary CNPJ.
+    // For F100, F120, the last header is a temporary CNPJ.
     // If we're creating one of these, we fill the CNPJ from the one passed in.
     const recordType = fields[0];
-    if ( (recordType === 'F100' || recordType === 'F120' || recordType === 'F600') && header === 'CNPJ') {
+    if ( (recordType === 'F100' || recordType === 'F120') && header === 'CNPJ') {
         record[header] = cnpj;
         return;
     }
@@ -247,18 +247,40 @@ const createRecord = (fields: string[], headers: string[], parentId?: string, cn
 };
 
 export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }): void => {
-    // 1. Get the original records, sorted by their initial order
-    let finalExportList = Object.values(records)
-        .flat()
+    // Special F-Block records that need to be grouped by F010
+    const fBlockChildrenTypes = ['F100', 'F120', 'F600', 'F700'];
+
+    // 1. Separate F-Block children from the rest
+    const allRecordsFlat = Object.values(records).flat();
+    const fBlockChildren: { [key: string]: EfdRecord[] } = {};
+    const otherRecords: EfdRecord[] = [];
+
+    allRecordsFlat.forEach(rec => {
+        const reg = String(rec.REG);
+        if (fBlockChildrenTypes.includes(reg)) {
+            const cnpjKey = String(rec.CNPJ || rec.CNPJ_F010 || 'unknown');
+            if (!fBlockChildren[cnpjKey]) {
+                fBlockChildren[cnpjKey] = [];
+            }
+            fBlockChildren[cnpjKey].push(rec);
+        } else {
+            otherRecords.push(rec);
+        }
+    });
+
+    // Sort the children within each CNPJ group by record type
+    for (const cnpjKey in fBlockChildren) {
+        fBlockChildren[cnpjKey].sort((a, b) => String(a.REG).localeCompare(String(b.REG)));
+    }
+
+    // 2. Build the initial list of records to be exported (without F-Block children)
+    // and insert any other new records in their correct places.
+    let baseExportList = otherRecords
         .filter(r => r._order !== undefined)
         .sort((a, b) => (a._order as number) - (b._order as number));
-    
-    // 2. Get new records, and sort them by their type to ensure a logical insertion order
-    const newRecords = Object.values(records)
-        .flat()
-        .filter(r => r._order === undefined)
-        .sort((a,b) => String(a.REG).localeCompare(String(b.REG)));
 
+    const newOtherRecords = otherRecords.filter(r => r._order === undefined);
+    
     const childToParentMap: { [child: string]: string } = {};
     for (const parent in recordHierarchy) {
         for (const child of recordHierarchy[parent]) {
@@ -266,23 +288,21 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
         }
     }
 
-    // 3. Intelligently insert new records into the sorted list
-    for (const newRec of newRecords) {
+    for (const newRec of newOtherRecords) {
         let insertionIndex = -1;
         const recordType = String(newRec.REG);
         const parentType = childToParentMap[recordType];
         
-        if (parentType) {
-            // Logic for child records: insert after the last related record (parent or sibling)
+        if (parentType && newRec._parentId) {
             let lastFamilyIndex = -1;
-            for (let i = finalExportList.length - 1; i >= 0; i--) {
-                const currentRec = finalExportList[i];
+            for (let i = baseExportList.length - 1; i >= 0; i--) {
+                const currentRec = baseExportList[i];
                  if (currentRec._id === newRec._parentId) {
                     lastFamilyIndex = i;
-                    const childrenOfParent = finalExportList.filter(rec => rec._parentId === newRec._parentId);
+                    const childrenOfParent = baseExportList.filter(rec => rec._parentId === newRec._parentId);
                     if (childrenOfParent.length > 0) {
                         const lastChild = childrenOfParent[childrenOfParent.length - 1];
-                        lastFamilyIndex = finalExportList.lastIndexOf(lastChild);
+                        lastFamilyIndex = baseExportList.lastIndexOf(lastChild);
                     }
                     break;
                 }
@@ -290,59 +310,62 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
             if (lastFamilyIndex !== -1) {
                 insertionIndex = lastFamilyIndex + 1;
             }
-
         } else {
-            // Logic for parent/standalone records: insert in order within its block
             const block = recordType.charAt(0);
             const blockCloserType = `${block}990`;
-
-            // Find the first record in the block that is 'greater' than the new record
-            let anchorIndex = finalExportList.findIndex(r => {
+            
+            let anchorIndex = baseExportList.findIndex(r => {
                  const currentRecType = String(r.REG);
-                 // Find record in the same block that is alphabetically greater than the new one
                  return currentRecType.startsWith(block) && currentRecType > recordType && currentRecType !== blockCloserType;
             });
             
             if (anchorIndex !== -1) {
                 insertionIndex = anchorIndex;
             } else {
-                 // If no greater record is found, insert before the block closer
-                const closerIndex = finalExportList.findIndex(r => r.REG === blockCloserType);
+                const closerIndex = baseExportList.findIndex(r => r.REG === blockCloserType);
                 if (closerIndex !== -1) {
                     insertionIndex = closerIndex;
                 }
             }
         }
         
-        // Fallback: if no specific position is found, place it before the block 9
         if (insertionIndex === -1) {
-            insertionIndex = finalExportList.findIndex(r => String(r.REG).startsWith('9'));
+            insertionIndex = baseExportList.findIndex(r => String(r.REG).startsWith('9'));
             if (insertionIndex === -1) {
-                insertionIndex = finalExportList.length; // or at the very end
+                insertionIndex = baseExportList.length;
             }
         }
-         finalExportList.splice(insertionIndex, 0, newRec);
+        baseExportList.splice(insertionIndex, 0, newRec);
     }
     
-    // 4. With the final, complete list, calculate all counters
+    // 3. Build the final export list by injecting F-Block children
+    const finalExportList: EfdRecord[] = [];
+    for (const record of baseExportList) {
+        finalExportList.push(record);
+        if (record.REG === 'F010') {
+            const cnpjKey = String(record.CNPJ);
+            if (fBlockChildren[cnpjKey]) {
+                finalExportList.push(...fBlockChildren[cnpjKey]);
+            }
+        }
+    }
+
+    // 4. Calculate counters based on the final, complete list
     const recordTypeCounters: { [key: string]: number } = {};
     const blockCounters: { [key: string]: number } = {};
-
+    
     finalExportList.forEach(record => {
         const reg = String(record.REG);
         const block = reg.charAt(0);
         
         recordTypeCounters[reg] = (recordTypeCounters[reg] || 0) + 1;
-
-        if (!blockCounters[block]) {
-            blockCounters[block] = 0;
-        }
-        blockCounters[block]++;
+        blockCounters[block] = (blockCounters[block] || 0) + 1;
     });
-
-
-    // 5. Generate the final text string, injecting the correct counts
+    
+    // 5. Generate the final text string
     let efdText = '';
+    const totalLines = finalExportList.length;
+
     for (const record of finalExportList) {
         const reg = String(record.REG);
         
@@ -361,14 +384,12 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
         }
         
         if (reg === '9999') {
-             // Total lines includes the 9999 record itself.
-            recordToWrite.QTD_LIN = String(finalExportList.length);
+            recordToWrite.QTD_LIN = String(totalLines);
         }
         
         const headers = RECORD_DEFINITIONS[reg];
         if (!headers) continue;
-
-        // Exclude the visual-only CNPJ field from export for specific records
+        
         const finalHeaders = headers.filter(h => {
           if ((reg === 'F100' || reg === 'F120') && h === 'CNPJ') return false;
           if (reg === 'F600' && h === 'CNPJ_F010') return false;
@@ -523,10 +544,10 @@ export const parseEfdFile = async (content: string): Promise<{ [key: string]: Ef
   const allRecords: { [key: string]: EfdRecord[] } = {};
 
   let currentCnpj: string | undefined = undefined;
+  let lastF010Cnpj: string | undefined = undefined;
   const parentStack: EfdRecord[] = [];
 
   for (let i = 0; i < lines.length; i++) {
-    // This is the key change: yield to the main thread every 500 lines.
     if (i % 500 === 0) {
       await yieldToMain();
     }
@@ -545,14 +566,22 @@ export const parseEfdFile = async (content: string): Promise<{ [key: string]: Ef
         parentStack.pop();
     }
     const parentId = parentStack.length > 0 ? parentStack[parentStack.length - 1]._id : undefined;
-
+    
+    // Determine the CNPJ for the current record
+    let recordCnpj: string | undefined;
     if (recordType.endsWith('010')) {
         currentCnpj = fields[1];
+        if (recordType === 'F010') {
+            lastF010Cnpj = fields[1];
+        }
     }
     
-    // For F-block, CNPJ comes from F010. For others, it might be C010, D010 etc.
-    // The logic correctly picks up the last seen '...010' CNPJ.
-    const recordCnpj = recordType === '0140' ? fields[2] : currentCnpj;
+    const fBlockChildrenTypes = ['F100', 'F120', 'F600', 'F700'];
+    if (fBlockChildrenTypes.includes(recordType)) {
+        recordCnpj = lastF010Cnpj;
+    } else {
+        recordCnpj = recordType === '0140' ? fields[2] : currentCnpj;
+    }
     
     const record = createRecord(fields, headers, parentId, recordCnpj, i);
 
@@ -561,7 +590,7 @@ export const parseEfdFile = async (content: string): Promise<{ [key: string]: Ef
     }
     allRecords[recordType].push(record);
     
-    if (recordHierarchy[recordType]) {
+    if (recordHierarchy[recordType] || recordType === 'F010') {
         parentStack.push(record);
     }
   }
