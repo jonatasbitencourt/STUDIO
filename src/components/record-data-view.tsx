@@ -211,11 +211,13 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
 
 
   const headers = useMemo(() => {
+    const allHeaders = RECORD_DEFINITIONS[recordType] || [];
     if (records.length > 0) {
+      // Get headers from the first record but filter out internal ones
       return Object.keys(records[0]).filter(h => h !== '_id' && h !== '_parentId' && h !== '_cnpj' && h !== '_order');
     }
-    // If no records, get headers from definition
-    return RECORD_DEFINITIONS[recordType]?.filter(h => h !== 'REG') || [];
+    // If no records, get headers from definition and include REG
+    return ['REG', ...allHeaders.filter(h => h !== 'REG')];
   }, [records, recordType]);
 
   const filteredRecords = useMemo(() => {

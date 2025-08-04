@@ -571,22 +571,22 @@ export default function Home() {
                       </SelectContent>
                     </Select>
                   )}
-                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Adicionar Registro
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem onSelect={() => handleCreateRecordType('0500')}>Registro 0500</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleCreateRecordType('A170')}>Registro A170</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleCreateRecordType('C170')}>Registro C170</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleCreateRecordType('F100')}>Registro F100</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleCreateRecordType('F120')}>Registro F120</DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleCreateRecordType('F700')}>Registro F700</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                 {activeView === 'estabelecimentos' && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
+                          <PlusCircle className="mr-2 h-4 w-4" />
+                          Adicionar Registro
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={() => handleCreateRecordType('0500')}>Registro 0500</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleCreateRecordType('F100')}>Registro F100</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleCreateRecordType('F120')}>Registro F120</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleCreateRecordType('F700')}>Registro F700</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                 )}
 
                 <Button onClick={handleExport} variant="outline" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
                   <Download className="mr-2 h-4 w-4" />
