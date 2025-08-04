@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import type { ParsedEfdData, EfdRecord, TaxSummaryItem, OperationSummaryItem } from './types';
@@ -263,27 +264,36 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
             const familyTypes = new Set(recordHierarchy[parentType] || []);
             familyTypes.add(parentType);
             for (let i = finalExportList.length - 1; i >= 0; i--) {
-                if (familyTypes.has(String(finalExportList[i].REG))) {
-                    insertionIndex = i + 1;
-                    break;
+                const currentRecType = String(finalExportList[i].REG);
+                if (familyTypes.has(currentRecType)) {
+                     // Check if it's the right parent, if parent info is available
+                    if (newRec._parentId && finalExportList[i]._id === newRec._parentId) {
+                        insertionIndex = i + 1;
+                        break;
+                    }
+                    if (!newRec._parentId) { // Fallback for children added without explicit parent
+                        insertionIndex = i + 1;
+                        break;
+                    }
                 }
             }
         } else {
             // Logic for parent/standalone records: insert in order within its block
             const block = recordType.charAt(0);
-            const blockCloser = `${block}990`;
+            const blockCloserType = `${block}990`;
 
             // Find the first record in the block that is 'greater' than the new record
-            let anchorIndex = finalExportList.findIndex(r => 
-                String(r.REG).charAt(0) === block && 
-                String(r.REG) > recordType
-            );
-
+            let anchorIndex = finalExportList.findIndex(r => {
+                 const currentRecType = String(r.REG);
+                 // Find record in the same block that is alphabetically greater than the new one
+                 return currentRecType.startsWith(block) && currentRecType > recordType && currentRecType !== blockCloserType;
+            });
+            
             if (anchorIndex !== -1) {
                 insertionIndex = anchorIndex;
             } else {
                  // If no greater record is found, insert before the block closer
-                const closerIndex = finalExportList.findIndex(r => r.REG === blockCloser);
+                const closerIndex = finalExportList.findIndex(r => r.REG === blockCloserType);
                 if (closerIndex !== -1) {
                     insertionIndex = closerIndex;
                 }
@@ -302,23 +312,21 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
     
     // 4. With the final, complete list, calculate all counters
     const recordTypeCounters: { [key: string]: number } = {};
-    const blockCounters: { [key: string]: { [recordType: string]: number } } = {};
-    let totalLines = 0;
+    const blockCounters: { [key: string]: number } = {};
 
     finalExportList.forEach(record => {
         const reg = String(record.REG);
         const block = reg.charAt(0);
         
-        // Count records per type
         recordTypeCounters[reg] = (recordTypeCounters[reg] || 0) + 1;
 
-        // Count records per block
         if (!blockCounters[block]) {
-            blockCounters[block] = {};
+            blockCounters[block] = 0;
         }
-        blockCounters[block][reg] = (blockCounters[block][reg] || 0) + 1;
-        totalLines++;
+        blockCounters[block]++;
     });
+
+    const totalLines = finalExportList.length;
 
     // 5. Generate the final text string, injecting the correct counts
     let efdText = '';
@@ -331,7 +339,7 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
 
         if (reg.endsWith('990') && reg.length === 4) {
             const block = reg.charAt(0);
-            const blockLineCount = Object.values(blockCounters[block] || {}).reduce((a, b) => a + b, 0);
+            const blockLineCount = blockCounters[block] || 0;
             const key = `QTD_LIN_${block}`;
             recordToWrite[key] = String(blockLineCount);
         }
@@ -342,8 +350,7 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
         }
         
         if (reg === '9999') {
-            // The total lines should include the 9999 record itself.
-            recordToWrite.QTD_LIN = String(totalLines + 1);
+            recordToWrite.QTD_LIN = String(totalLines);
         }
         
         const fieldsToJoin = headers.map(field => recordToWrite[field] ?? '');
@@ -538,4 +545,5 @@ export const parseEfdFile = async (content: string): Promise<{ [key: string]: Ef
   return allRecords;
 };
 
+    
     
