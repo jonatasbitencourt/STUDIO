@@ -233,89 +233,94 @@ const createRecord = (fields: string[], headers: string[], parentId?: string, cn
 };
 
 export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }): void => {
-    // 1. Separate original records from newly added ones
+    // 1. Get the original records, sorted by their initial order
     let finalExportList = Object.values(records)
         .flat()
         .filter(r => r._order !== undefined)
         .sort((a, b) => (a._order as number) - (b._order as number));
     
+    // 2. Get new records, and sort them by their type to ensure a logical insertion order
     const newRecords = Object.values(records)
         .flat()
-        .filter(r => r._order === undefined);
+        .filter(r => r._order === undefined)
+        .sort((a,b) => String(a.REG).localeCompare(String(b.REG)));
 
-    // 2. Insert new records intelligently if they exist
-    if (newRecords.length > 0) {
-        const childToParentMap: { [child: string]: string } = {};
-        for (const parent in recordHierarchy) {
-            for (const child of recordHierarchy[parent]) {
-                childToParentMap[child] = parent;
+    const childToParentMap: { [child: string]: string } = {};
+    for (const parent in recordHierarchy) {
+        for (const child of recordHierarchy[parent]) {
+            childToParentMap[child] = parent;
+        }
+    }
+
+    // 3. Intelligently insert new records into the sorted list
+    for (const newRec of newRecords) {
+        let insertionIndex = -1;
+        const recordType = String(newRec.REG);
+        const parentType = childToParentMap[recordType];
+        
+        if (parentType) {
+            // Logic for child records: insert after the last related record (parent or sibling)
+            const familyTypes = new Set(recordHierarchy[parentType] || []);
+            familyTypes.add(parentType);
+            for (let i = finalExportList.length - 1; i >= 0; i--) {
+                if (familyTypes.has(String(finalExportList[i].REG))) {
+                    insertionIndex = i + 1;
+                    break;
+                }
+            }
+        } else {
+            // Logic for parent/standalone records: insert in order within its block
+            const block = recordType.charAt(0);
+            const blockCloser = `${block}990`;
+
+            // Find the first record in the block that is 'greater' than the new record
+            let anchorIndex = finalExportList.findIndex(r => 
+                String(r.REG).charAt(0) === block && 
+                String(r.REG) > recordType
+            );
+
+            if (anchorIndex !== -1) {
+                insertionIndex = anchorIndex;
+            } else {
+                 // If no greater record is found, insert before the block closer
+                const closerIndex = finalExportList.findIndex(r => r.REG === blockCloser);
+                if (closerIndex !== -1) {
+                    insertionIndex = closerIndex;
+                }
             }
         }
         
-        newRecords.sort((a,b) => String(a.REG).localeCompare(String(b.REG)));
-
-        for (const newRec of newRecords) {
-            let insertionIndex = -1;
-            const parentType = childToParentMap[String(newRec.REG)];
-            const recordType = String(newRec.REG);
-
-            if (parentType) {
-                const familyTypes = new Set(recordHierarchy[parentType]);
-                familyTypes.add(parentType);
-
-                for (let i = finalExportList.length - 1; i >= 0; i--) {
-                    if (familyTypes.has(String(finalExportList[i].REG))) {
-                        insertionIndex = i + 1;
-                        break;
-                    }
-                }
-            }
-
+        // Fallback: if no specific position is found, place it before the block 9
+        if (insertionIndex === -1) {
+            insertionIndex = finalExportList.findIndex(r => String(r.REG).startsWith('9'));
             if (insertionIndex === -1) {
-                const block = recordType.charAt(0);
-                const blockCloser = `${block}990`;
-                
-                let lastRecordOfBlockIndex = -1;
-                 for (let i = finalExportList.length - 1; i >= 0; i--) {
-                    if (String(finalExportList[i].REG).charAt(0) === block && finalExportList[i].REG !== blockCloser) {
-                        lastRecordOfBlockIndex = i;
-                        break;
-                    }
-                }
-
-                if (lastRecordOfBlockIndex !== -1) {
-                    insertionIndex = lastRecordOfBlockIndex + 1;
-                } else {
-                     const closerIndex = finalExportList.findIndex(r => r.REG === blockCloser);
-                     if (closerIndex !== -1) {
-                         insertionIndex = closerIndex;
-                     }
-                }
+                insertionIndex = finalExportList.length; // or at the very end
             }
-            
-            if (insertionIndex === -1) {
-                insertionIndex = finalExportList.findIndex(r => String(r.REG).startsWith('9'));
-                if (insertionIndex === -1) {
-                    insertionIndex = finalExportList.length;
-                }
-            }
-             finalExportList.splice(insertionIndex, 0, newRec);
         }
+         finalExportList.splice(insertionIndex, 0, newRec);
     }
     
-    // 3. With the final, complete list, calculate all counters
+    // 4. With the final, complete list, calculate all counters
     const recordTypeCounters: { [key: string]: number } = {};
-    const blockCounters: { [key: string]: number } = {};
+    const blockCounters: { [key: string]: { [recordType: string]: number } } = {};
+    let totalLines = 0;
 
     finalExportList.forEach(record => {
         const reg = String(record.REG);
         const block = reg.charAt(0);
         
+        // Count records per type
         recordTypeCounters[reg] = (recordTypeCounters[reg] || 0) + 1;
-        blockCounters[block] = (blockCounters[block] || 0) + 1;
+
+        // Count records per block
+        if (!blockCounters[block]) {
+            blockCounters[block] = {};
+        }
+        blockCounters[block][reg] = (blockCounters[block][reg] || 0) + 1;
+        totalLines++;
     });
 
-    // 4. Generate the final text string, injecting the correct counts
+    // 5. Generate the final text string, injecting the correct counts
     let efdText = '';
     for (const record of finalExportList) {
         const reg = String(record.REG);
@@ -326,8 +331,9 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
 
         if (reg.endsWith('990') && reg.length === 4) {
             const block = reg.charAt(0);
+            const blockLineCount = Object.values(blockCounters[block] || {}).reduce((a, b) => a + b, 0);
             const key = `QTD_LIN_${block}`;
-            recordToWrite[key] = String(blockCounters[block] || 0);
+            recordToWrite[key] = String(blockLineCount);
         }
         
         if (reg === '9900') {
@@ -336,7 +342,8 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
         }
         
         if (reg === '9999') {
-            recordToWrite.QTD_LIN = String(finalExportList.length);
+            // The total lines should include the 9999 record itself.
+            recordToWrite.QTD_LIN = String(totalLines + 1);
         }
         
         const fieldsToJoin = headers.map(field => recordToWrite[field] ?? '');
