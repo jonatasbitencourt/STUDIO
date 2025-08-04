@@ -7,7 +7,7 @@
       "**/node_modules/**"
     ],
     "frameworksBackend": {
-      "region": "us-west1"
+      "region": "us-central1"
     }
   }
 }
