@@ -536,7 +536,7 @@ export default function Home() {
           )}
           
           {isMounted && data && !isProcessing && (
-            <div className="space-y-8 h-full flex flex-col">
+            <div className="space-y-8 h-full flex flex-col ml-72">
               <div className="flex flex-wrap items-center justify-between gap-4">
                  <div className="flex flex-col">
                    <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
@@ -600,7 +600,7 @@ export default function Home() {
                 </div>
               </div>
               
-              <div className="flex-grow min-h-0 ml-72">
+              <div className="flex-grow min-h-0">
                 {selectedRecord ? (
                   <RecordDataView
                     key={`${selectedCnpj}-${selectedRecord}`}
