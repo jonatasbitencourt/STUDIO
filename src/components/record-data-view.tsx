@@ -243,7 +243,12 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
       return Object.keys(records[0]).filter(h => h !== '_id' && h !== '_parentId' && h !== '_cnpj' && h !== '_order');
     }
     // If no records, get headers from definition and include REG
-    return ['REG', ...RECORD_DEFINITIONS[recordType] || []];
+    const definitionHeaders = RECORD_DEFINITIONS[recordType] || [];
+    const displayHeaders = [...definitionHeaders];
+    if (['F100', 'F120', 'F600'].includes(recordType) && !displayHeaders.includes('CNPJ')) {
+        displayHeaders.push('CNPJ');
+    }
+    return ['REG', ...displayHeaders.filter(h => h !== 'REG')];
   }, [records, recordType]);
 
   const filteredRecords = useMemo(() => {
@@ -464,6 +469,8 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
     </Card>
   );
 }
+    
+
     
 
     
