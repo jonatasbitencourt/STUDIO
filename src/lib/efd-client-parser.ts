@@ -233,11 +233,15 @@ const createRecord = (fields: string[], headers: string[], parentId?: string, cn
 };
 
 export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }): void => {
-    const allRecords = Object.values(records).flat();
-    let finalExportList = allRecords.filter(r => r._order !== undefined)
-                                      .sort((a, b) => (a._order as number) - (b._order as number));
-    const newRecords = allRecords.filter(r => r._order === undefined);
+    // 1. Separate original records from newly added ones
+    const allRecordsFlat = Object.values(records).flat();
+    let finalExportList = allRecordsFlat
+        .filter(r => r._order !== undefined)
+        .sort((a, b) => (a._order as number) - (b._order as number));
+    
+    const newRecords = allRecordsFlat.filter(r => r._order === undefined);
 
+    // 2. Insert new records intelligently if they exist
     if (newRecords.length > 0) {
         const childToParentMap: { [child: string]: string } = {};
         for (const parent in recordHierarchy) {
@@ -245,18 +249,20 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
                 childToParentMap[child] = parent;
             }
         }
+        
+        // Sort new records to maintain a predictable insertion order (e.g., 1300 before 1700)
+        newRecords.sort((a,b) => String(a.REG).localeCompare(String(b.REG)));
 
-        const recordsToInsert: { record: EfdRecord, index: number }[] = [];
-
-        newRecords.forEach(newRec => {
+        for (const newRec of newRecords) {
             let insertionIndex = -1;
             const parentType = childToParentMap[String(newRec.REG)];
+            const recordType = String(newRec.REG);
 
             if (parentType) {
                 // It's a child record. Find the last occurrence of its parent or any of its siblings.
                 const familyTypes = new Set(recordHierarchy[parentType]);
                 familyTypes.add(parentType);
-                
+
                 for (let i = finalExportList.length - 1; i >= 0; i--) {
                     if (familyTypes.has(String(finalExportList[i].REG))) {
                         insertionIndex = i + 1; // Insert after the last known family member.
@@ -264,92 +270,101 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
                     }
                 }
             }
-            
-            // Fallback for non-child records or children whose parents aren't in the file.
-            // Insert before the block's closing record.
-            if (insertionIndex === -1) {
-                const block = String(newRec.REG).charAt(0);
-                const closerReg = `${block}990`;
-                insertionIndex = finalExportList.findIndex(r => r.REG === closerReg);
 
-                // If no closer found (should not happen in a valid file), find the end of the block.
-                if (insertionIndex === -1) {
-                    for (let i = finalExportList.length - 1; i >= 0; i--) {
-                        if (String(finalExportList[i].REG).charAt(0) === block) {
-                            insertionIndex = i + 1;
-                            break;
-                        }
+            if (insertionIndex === -1) {
+                // It's a parent record or its parent doesn't exist.
+                // Insert it at the end of its block, but before the block's closing record.
+                const block = recordType.charAt(0);
+                const blockCloser = `${block}990`;
+                
+                let lastRecordOfBlockIndex = -1;
+                 for (let i = finalExportList.length - 1; i >= 0; i--) {
+                    if (String(finalExportList[i].REG).charAt(0) === block && finalExportList[i].REG !== blockCloser) {
+                        lastRecordOfBlockIndex = i;
+                        break;
                     }
                 }
+
+                if (lastRecordOfBlockIndex !== -1) {
+                    insertionIndex = lastRecordOfBlockIndex + 1;
+                } else {
+                    // If no other records of that block exist, find the block closer and insert before it
+                     const closerIndex = finalExportList.findIndex(r => r.REG === blockCloser);
+                     if (closerIndex !== -1) {
+                         insertionIndex = closerIndex;
+                     }
+                }
             }
-            
-            // If still no index, something is very wrong. Place before block 9 as a last resort.
+
+            // Fallback: if no position found, place it before block 9.
             if (insertionIndex === -1) {
                 insertionIndex = finalExportList.findIndex(r => String(r.REG).startsWith('9'));
-                if (insertionIndex === -1) {
+                if (insertionIndex === -1) { // If no block 9, append to the end
                     insertionIndex = finalExportList.length;
                 }
             }
-
-            recordsToInsert.push({ record: newRec, index: insertionIndex });
-        });
-
-        // Sort insertions by index descending to avoid shifting indices during splicing.
-        recordsToInsert.sort((a, b) => b.index - a.index);
-        recordsToInsert.forEach(item => {
-            finalExportList.splice(item.index, 0, item.record);
-        });
+             finalExportList.splice(insertionIndex, 0, newRec);
+        }
     }
     
-    // With the final, complete list, calculate all counters.
+    // 3. With the final, complete list, calculate all counters
     const recordTypeCounters: { [key: string]: number } = {};
+    const blockCounters: { [key: string]: number } = {};
+
     finalExportList.forEach(record => {
-        recordTypeCounters[String(record.REG)] = (recordTypeCounters[String(record.REG)] || 0) + 1;
+        const reg = String(record.REG);
+        const block = reg.charAt(0);
+        
+        recordTypeCounters[reg] = (recordTypeCounters[reg] || 0) + 1;
+        
+        // Don't count the closer record in its own block count
+        if (!reg.endsWith('990') && reg !== '9999') {
+          blockCounters[block] = (blockCounters[block] || 0) + 1;
+        }
     });
 
-    const blockCounters: { [key: string]: number } = {};
-    finalExportList.forEach(record => {
-        const block = String(record.REG).charAt(0);
+    // Add 1 for the opening record of each block (e.g., 0001, C001, 1001, etc.)
+    Object.keys(blockCounters).forEach(block => {
         blockCounters[block] = (blockCounters[block] || 0) + 1;
     });
+
+    // Manually add the closing record count to each block
+     Object.keys(blockCounters).forEach(block => {
+        const closer = `${block}990`;
+        if (finalExportList.some(r => r.REG === closer)) {
+             blockCounters[block]++;
+        }
+    });
     
-    // Generate the final text string, injecting the correct counts into the counter records.
+    // 4. Generate the final text string, injecting the correct counts
     let efdText = '';
     for (const record of finalExportList) {
-        const newRecord = { ...record }; // Use a copy to avoid mutating state directly.
-        const reg = String(newRecord.REG);
-        
+        const reg = String(record.REG);
+        const headers = RECORD_DEFINITIONS[reg];
+        if (!headers) continue;
+
+        // Use a copy to avoid mutating state directly when updating counters
+        const recordToWrite = { ...record }; 
+
         // Update block totalizers (*990)
         if (reg.endsWith('990') && reg.length === 4) {
             const block = reg.charAt(0);
-            newRecord[`QTD_LIN_${block}`] = String(blockCounters[block] || 0);
+            const key = `QTD_LIN_${block}`;
+            recordToWrite[key] = String(blockCounters[block] || 0);
         }
         
         // Update specific record counters (9900)
         if (reg === '9900') {
-            const recordTypeToCount = String(newRecord.REG_BLC!);
-            newRecord.QTD_REG_BLC = String(recordTypeCounters[recordTypeToCount] || 0);
-        }
-        
-        // Update block 9 totalizer (9990)
-        if (reg === '9990') {
-            newRecord.QTD_LIN_9 = String(blockCounters['9'] || 0);
+            const recordTypeToCount = String(recordToWrite.REG_BLC!);
+            recordToWrite.QTD_REG_BLC = String(recordTypeCounters[recordTypeToCount] || 0);
         }
         
         // Update file totalizer (9999)
         if (reg === '9999') {
-            newRecord.QTD_LIN = String(finalExportList.length);
+            recordToWrite.QTD_LIN = String(finalExportList.length);
         }
         
-        // ERROR CORRECTION: Truncate A170->DESCR_COMPL
-        if (reg === 'A170' && typeof newRecord.DESCR_COMPL === 'string') {
-            newRecord.DESCR_COMPL = newRecord.DESCR_COMPL.substring(0, 50);
-        }
-        
-        const headers = RECORD_DEFINITIONS[reg];
-        if (!headers) continue;
-        
-        const fieldsToJoin = headers.map(field => newRecord[field] || '');
+        const fieldsToJoin = headers.map(field => recordToWrite[field] ?? '');
         
         const line = fieldsToJoin.join('|');
         efdText += `|${line}|\n`;
