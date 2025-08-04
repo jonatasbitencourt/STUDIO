@@ -600,7 +600,7 @@ export default function Home() {
                 </div>
               </div>
               
-              <div className="flex-grow min-h-0">
+              <div className="flex-grow min-h-0 ml-72">
                 {selectedRecord ? (
                   <RecordDataView
                     key={`${selectedCnpj}-${selectedRecord}`}

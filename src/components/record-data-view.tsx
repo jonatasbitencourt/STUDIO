@@ -296,7 +296,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
   // New logic for empty state: Show table headers and add buttons
   if (records.length === 0 && paginatedRecords.length === 0) {
       return (
-          <Card className="shadow-neumo border-none rounded-2xl flex flex-col max-h-[calc(100vh-12rem)] ml-72">
+          <Card className="shadow-neumo border-none rounded-2xl flex flex-col max-h-[calc(100vh-12rem)]">
               <CardHeader>
                   <CardTitle>Dados do Registro: {recordType}</CardTitle>
                   <CardDescription>
@@ -363,7 +363,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
   }
 
   return (
-    <Card className="shadow-neumo border-none rounded-2xl flex flex-col max-h-[calc(100vh-12rem)] ml-72">
+    <Card className="shadow-neumo border-none rounded-2xl flex flex-col max-h-[calc(100vh-12rem)]">
       <CardHeader>
         <div className="flex justify-between items-start gap-4">
             <div>
