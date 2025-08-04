@@ -158,7 +158,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
     setFilterColumn('');
     setFilterInputValue('');
     setFilterValue('');
-  }, [recordType]); // Reset filters only if recordType changes
+  }, [recordType]);
 
 
   const handleRowCommit = useCallback((updatedRecord: EfdRecord) => {
@@ -296,7 +296,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
               <CardContent className="flex-grow overflow-hidden">
                   <ScrollArea className="h-full">
                       <Table className="w-max">
-                          <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm">
+                          <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-10">
                               <TableRow>
                                   <TableHead className="sticky left-0 bg-background z-30 h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">Ações</TableHead>
                                   {headers.map(header => (
@@ -397,10 +397,10 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
             </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-grow overflow-hidden">
+      <CardContent className="flex-grow">
         <ScrollArea className="h-full">
             <Table className="w-max">
-              <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm">
+              <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-10">
                 <TableRow>
                   <TableHead className="sticky left-0 bg-background z-30 h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">Ações</TableHead>
                   {headers.map(header => (
@@ -458,4 +458,6 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
     </Card>
   );
 }
+    
+
     
