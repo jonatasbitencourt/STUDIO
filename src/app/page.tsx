@@ -509,7 +509,7 @@ export default function Home() {
 
   return (
     <SidebarProvider>
-      <Sidebar collapsible="icon">
+      <Sidebar>
         <SidebarHeader className="p-4">
           <AppLogo />
         </SidebarHeader>
@@ -520,113 +520,117 @@ export default function Home() {
           </p>
         </SidebarFooter>
       </Sidebar>
-      <div className="p-4 sm:p-6 lg:p-8">
-        {isProcessing && (
-          <div className="flex flex-col gap-4 items-center justify-center h-full">
-            <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-muted-foreground">Processando...</p>
-          </div>
-        )}
+      <SidebarInset>
+        <div className="p-4 sm:p-6 lg:p-8 h-full">
+          {isProcessing && (
+            <div className="flex flex-col gap-4 items-center justify-center h-full">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+              <p className="text-muted-foreground">Processando...</p>
+            </div>
+          )}
 
-        {!data && !isProcessing && (
-          <div className="flex items-center justify-center h-full">
-            <FileUploader onFileRead={handleFileRead} />
-          </div>
-        )}
-        
-        {isMounted && data && !isProcessing && (
-          <div className="space-y-8">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-               <div className="flex flex-col">
-                 <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-                 {showCnpjFilter && (
-                    <p className="text-sm text-muted-foreground">
-                        {selectedCnpj === 'all' ? 'Exibindo todos os estabelecimentos' : `Exibindo dados para: ${establishmentRecords.find(e => String(e.CNPJ) === selectedCnpj)?.NOME || selectedCnpj}`}
-                    </p>
-                 )}
-               </div>
-               <div className="flex items-center gap-2">
-                 {showCnpjFilter && (
-                    <Select value={selectedCnpj} onValueChange={handleFilterChange}>
-                      <SelectTrigger className="w-[280px] shadow-neumo active:shadow-neumo-inset rounded-xl">
-                        <SelectValue placeholder="Filtrar por Estabelecimento" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os Estabelecimentos</SelectItem>
-                        {establishmentRecords.map((est) => (
-                          <SelectItem key={String(est.CNPJ)} value={String(est.CNPJ!)}>
-                            {`${est.NOME} (${est.CNPJ})`}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                 {activeView === 'estabelecimentos' && (
+          {!data && !isProcessing && (
+            <div className="flex items-center justify-center h-full">
+              <FileUploader onFileRead={handleFileRead} />
+            </div>
+          )}
+          
+          {isMounted && data && !isProcessing && (
+            <div className="space-y-8 h-full flex flex-col">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                 <div className="flex flex-col">
+                   <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
+                   {showCnpjFilter && (
+                      <p className="text-sm text-muted-foreground">
+                          {selectedCnpj === 'all' ? 'Exibindo todos os estabelecimentos' : `Exibindo dados para: ${establishmentRecords.find(e => String(e.CNPJ) === selectedCnpj)?.NOME || selectedCnpj}`}
+                      </p>
+                   )}
+                 </div>
+                 <div className="flex items-center gap-2">
+                   {showCnpjFilter && (
+                      <Select value={selectedCnpj} onValueChange={handleFilterChange}>
+                        <SelectTrigger className="w-[280px] shadow-neumo active:shadow-neumo-inset rounded-xl">
+                          <SelectValue placeholder="Filtrar por Estabelecimento" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os Estabelecimentos</SelectItem>
+                          {establishmentRecords.map((est) => (
+                            <SelectItem key={String(est.CNPJ)} value={String(est.CNPJ!)}>
+                              {`${est.NOME} (${est.CNPJ})`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                   {activeView === 'estabelecimentos' && (
+                    <>
+                      <Button onClick={handleProcessChanges} variant="default" className="shadow-neumo active:shadow-neumo-inset rounded-xl bg-green-500 hover:bg-green-600">
+                        <CheckSquare className="mr-2 h-4 w-4" />
+                        Processar Alterações
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Adicionar Registro
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onSelect={() => handleCreateRecordType('0500')}>Registro 0500</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleCreateRecordType('F010')}>Registro F010</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleCreateRecordType('F100')}>Registro F100</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleCreateRecordType('F120')}>Registro F120</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleCreateRecordType('F600')}>Registro F600</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleCreateRecordType('F700')}>Registro F700</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleCreateRecordType('1300')}>Registro 1300</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleCreateRecordType('1700')}>Registro 1700</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </>
+                   )}
+
+                  <Button onClick={handleExport} variant="outline" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
+                    <Download className="mr-2 h-4 w-4" />
+                    Exportar Arquivo
+                  </Button>
+                  <Button onClick={handleReset} variant="ghost" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Carregar arquivo
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex-grow min-h-0">
+                {selectedRecord ? (
+                  <RecordDataView
+                    key={`${selectedCnpj}-${selectedRecord}`}
+                    recordType={selectedRecord}
+                    records={draftData?.[selectedRecord] || []}
+                    onRecordsUpdate={handleRecordsUpdate}
+                    onRecordDelete={handleRecordDelete}
+                  />
+                ) : (
                   <>
-                    <Button onClick={handleProcessChanges} variant="default" className="shadow-neumo active:shadow-neumo-inset rounded-xl bg-green-500 hover:bg-green-600">
-                      <CheckSquare className="mr-2 h-4 w-4" />
-                      Processar Alterações
-                    </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="outline" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
-                          <PlusCircle className="mr-2 h-4 w-4" />
-                          Adicionar Registro
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => handleCreateRecordType('0500')}>Registro 0500</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleCreateRecordType('F010')}>Registro F010</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleCreateRecordType('F100')}>Registro F100</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleCreateRecordType('F120')}>Registro F120</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleCreateRecordType('F600')}>Registro F600</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleCreateRecordType('F700')}>Registro F700</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleCreateRecordType('1300')}>Registro 1300</DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleCreateRecordType('1700')}>Registro 1700</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {activeView === 'estabelecimentos' && allData && (
+                       <RecordDataView
+                          key={`all-data-0140-${selectedCnpj}`}
+                          recordType="0140"
+                          records={draftData?.['0140'] || []}
+                          onRecordsUpdate={(updatedRecords) => handleRecordsUpdate(updatedRecords, '0140')}
+                          onRecordDelete={(record) => handleRecordDelete(record)}
+                       />
+                    )}
+                    {activeView === 'entradas' && <OperationsSummary data={data.operationsSummaryEntradas} title="Resumo das Entradas" description="Análise detalhada por CFOP, CST e Alíquotas"/>}
+                    {activeView === 'saidas' && <OperationsSummary data={data.operationsSummarySaidas} title="Resumo das Saídas" description="Análise detalhada por CFOP, CST e Alíquotas"/>}
+                    {activeView === 'apuracao_pis' && <TaxSummary data={data.taxSummaryPis} title="Apuração PIS" description="Detalhamento da apuração de PIS (Registro M200)" />}
+                    {activeView === 'apuracao_cofins' && <TaxSummary data={data.taxSummaryCofins} title="Apuração COFINS" description="Detalhamento da apuração de COFINS (Registro M600)" />}
                   </>
-                 )}
-
-                <Button onClick={handleExport} variant="outline" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
-                  <Download className="mr-2 h-4 w-4" />
-                  Exportar Arquivo
-                </Button>
-                <Button onClick={handleReset} variant="ghost" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
-                  <RefreshCw className="mr-2 h-4 w-4" />
-                  Carregar arquivo
-                </Button>
+                )}
               </div>
             </div>
-            
-            {selectedRecord ? (
-              <RecordDataView
-                key={`${selectedCnpj}-${selectedRecord}`}
-                recordType={selectedRecord}
-                records={draftData?.[selectedRecord] || []}
-                onRecordsUpdate={handleRecordsUpdate}
-                onRecordDelete={handleRecordDelete}
-              />
-            ) : (
-              <>
-                {activeView === 'estabelecimentos' && allData && (
-                   <RecordDataView
-                      key={`all-data-0140-${selectedCnpj}`}
-                      recordType="0140"
-                      records={draftData?.['0140'] || []}
-                      onRecordsUpdate={(updatedRecords) => handleRecordsUpdate(updatedRecords, '0140')}
-                      onRecordDelete={(record) => handleRecordDelete(record)}
-                   />
-                )}
-                {activeView === 'entradas' && <OperationsSummary data={data.operationsSummaryEntradas} title="Resumo das Entradas" description="Análise detalhada por CFOP, CST e Alíquotas"/>}
-                {activeView === 'saidas' && <OperationsSummary data={data.operationsSummarySaidas} title="Resumo das Saídas" description="Análise detalhada por CFOP, CST e Alíquotas"/>}
-                {activeView === 'apuracao_pis' && <TaxSummary data={data.taxSummaryPis} title="Apuração PIS" description="Detalhamento da apuração de PIS (Registro M200)" />}
-                {activeView === 'apuracao_cofins' && <TaxSummary data={data.taxSummaryCofins} title="Apuração COFINS" description="Detalhamento da apuração de COFINS (Registro M600)" />}
-              </>
-            )}
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      </SidebarInset>
     </SidebarProvider>
   );
 }
