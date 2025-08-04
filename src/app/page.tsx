@@ -6,7 +6,7 @@ import type { ParsedEfdData, EfdRecord } from '@/lib/types';
 import { parseEfdFile, recalculateSummaries, exportRecordsToEfdText, RECORD_DEFINITIONS } from '@/lib/efd-client-parser';
 import { useToast } from "@/hooks/use-toast";
 
-import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator, SidebarFooter } from '@/components/ui/sidebar';
+import { SidebarProvider, Sidebar, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator, SidebarFooter } from '@/components/ui/sidebar';
 import { AppLogo } from '@/components/efd-insights-logo';
 import { FileUploader } from '@/components/file-uploader';
 import { OperationsSummary } from '@/components/operations-summary';
@@ -520,7 +520,7 @@ export default function Home() {
           </p>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>
+      <div className="w-full">
         <div className="p-4 sm:p-6 lg:p-8 h-full">
           {isProcessing && (
             <div className="flex flex-col gap-4 items-center justify-center h-full">
@@ -630,7 +630,7 @@ export default function Home() {
             </div>
           )}
         </div>
-      </SidebarInset>
+      </div>
     </SidebarProvider>
   );
 }

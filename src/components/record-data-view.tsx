@@ -296,14 +296,14 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
   // New logic for empty state: Show table headers and add buttons
   if (records.length === 0 && paginatedRecords.length === 0) {
       return (
-          <Card className="shadow-neumo border-none rounded-2xl flex flex-col max-h-[calc(100vh-12rem)]">
+          <Card className="shadow-neumo border-none rounded-2xl flex flex-col max-h-[calc(100vh-12rem)] ml-72">
               <CardHeader>
                   <CardTitle>Dados do Registro: {recordType}</CardTitle>
                   <CardDescription>
                       Nenhum registro encontrado para {recordType}. Adicione um novo registro ou cole do Excel.
                   </CardDescription>
               </CardHeader>
-              <CardContent className="flex-grow overflow-auto">
+              <CardContent className="flex-grow overflow-auto p-0">
                   <Table className="w-max">
                       <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-40">
                           <TableRow>
@@ -363,7 +363,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
   }
 
   return (
-    <Card className="shadow-neumo border-none rounded-2xl flex flex-col max-h-[calc(100vh-12rem)]">
+    <Card className="shadow-neumo border-none rounded-2xl flex flex-col max-h-[calc(100vh-12rem)] ml-72">
       <CardHeader>
         <div className="flex justify-between items-start gap-4">
             <div>
@@ -405,11 +405,11 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
             </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-grow overflow-auto">
+      <CardContent className="flex-grow overflow-auto p-0">
           <Table className="w-max relative">
             <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-40">
               <TableRow>
-                <TableHead className="sticky left-0 bg-background h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">Ações</TableHead>
+                <TableHead className="sticky left-0 bg-background h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap z-30">Ações</TableHead>
                 {headers.map(header => (
                   <TableHead key={header} className="h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">{header}</TableHead>
                 ))}
