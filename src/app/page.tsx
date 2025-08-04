@@ -581,9 +581,13 @@ export default function Home() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
                         <DropdownMenuItem onSelect={() => handleCreateRecordType('0500')}>Registro 0500</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleCreateRecordType('F010')}>Registro F010</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => handleCreateRecordType('F100')}>Registro F100</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => handleCreateRecordType('F120')}>Registro F120</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleCreateRecordType('F600')}>Registro F600</DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => handleCreateRecordType('F700')}>Registro F700</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleCreateRecordType('1300')}>Registro 1300</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleCreateRecordType('1700')}>Registro 1700</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                  )}
