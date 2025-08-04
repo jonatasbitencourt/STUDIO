@@ -520,7 +520,7 @@ export default function Home() {
           </p>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="p-4 sm:p-6 lg:p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
         {isProcessing && (
           <div className="flex flex-col gap-4 items-center justify-center h-full">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -626,7 +626,7 @@ export default function Home() {
             )}
           </div>
         )}
-      </SidebarInset>
+      </div>
     </SidebarProvider>
   );
 }
