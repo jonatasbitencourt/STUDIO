@@ -118,9 +118,9 @@ export const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   'D990': ['REG', 'QTD_LIN_D'],
   'F001': ['REG', 'IND_MOV'],
   'F010': ['REG', 'CNPJ'],
-  'F100': ['REG', 'IND_OPER', 'COD_PART', 'COD_ITEM', 'DT_OPER', 'VL_OPER', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'NAT_BC_CRED', 'IND_ORIG_CRED', 'COD_CTA', 'COD_CCUS', 'DESC_DOC_OPER'],
+  'F100': ['REG', 'IND_OPER', 'COD_PART', 'COD_ITEM', 'DT_OPER', 'VL_OPER', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'NAT_BC_CRED', 'IND_ORIG_CRED', 'COD_CTA', 'COD_CCUS', 'DESC_DOC_OPER', 'CNPJ'],
   'F111': ['REG', 'NUM_PROC', 'IND_PROC'],
-  'F120': ['REG', 'NAT_BC_CRED', 'IDENT_BEM_IMOB', 'IND_ORIG_CRED', 'IND_UTIL_BEM_IMOB', 'VL_OPER_DEP', 'VL_EXC_BC', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA', 'COD_CCUS', 'DESCR_BEM'],
+  'F120': ['REG', 'NAT_BC_CRED', 'IDENT_BEM_IMOB', 'IND_ORIG_CRED', 'IND_UTIL_BEM_IMOB', 'VL_OPER_DEP', 'VL_EXC_BC', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA', 'COD_CCUS', 'DESCR_BEM', 'CNPJ'],
   'F129': ['REG', 'NUM_PROC', 'IND_PROC'],
   'F130': ['REG', 'NAT_BC_CRED', 'IDENT_BEM_IMOB', 'IND_ORIG_CRED', 'IND_UTIL_BEM_IMOB', 'MES_AQUIS', 'VL_AQUIS_BEM', 'VL_EXC_BC', 'IND_NR_PARC', 'CST_PIS', 'VL_BC_PIS', 'ALIQ_PIS', 'VL_PIS', 'CST_COFINS', 'VL_BC_COFINS', 'ALIQ_COFINS', 'VL_COFINS', 'COD_CTA', 'COD_CCUS', 'DESCR_BEM'],
   'F139': ['REG', 'NUM_PROC', 'IND_PROC'],
@@ -138,7 +138,7 @@ export const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   'F559': ['REG', 'NUM_PROC', 'IND_PROC'],
   'F560': ['REG', 'VL_REC_COMP', 'CST_PIS', 'QUANT_BC_PIS', 'ALIQ_PIS_QUANT', 'VL_PIS', 'CST_COFINS', 'QUANT_BC_COFINS', 'ALIQ_COFINS_QUANT', 'VL_COFINS', 'COD_MOD', 'CFOP', 'COD_CTA', 'INFO_COMPL'],
   'F569': ['REG', 'NUM_PROC', 'IND_PROC'],
-  'F600': ['REG', 'IND_NAT_RET', 'DT_RET', 'VL_BC_RET', 'VL_RET', 'COD_REC', 'IND_NAT_REC', 'CNPJ', 'VL_RET_PIS', 'VL_RET_COFINS', 'IND_DEC'],
+  'F600': ['REG', 'IND_NAT_RET', 'DT_RET', 'VL_BC_RET', 'VL_RET', 'COD_REC', 'IND_NAT_REC', 'CNPJ', 'VL_RET_PIS', 'VL_RET_COFINS', 'IND_DEC', 'CNPJ_F010'],
   'F700': ['REG', 'IND_ORI_DED', 'IND_NAT_DED', 'VL_DED_PIS', 'VL_DED_COFINS', 'VL_BC_OPER', 'CNPJ', 'INF_COMPL'],
   'F800': ['REG', 'NAT_CRED_SUC', 'DT_SUCESS', 'CNPJ_SUCED', 'PER_APU_CRED_ORIG', 'VL_CRED_PIS', 'VL_CRED_COFINS', 'PERC_FUS_CIS_INCORP'],
   'F990': ['REG', 'QTD_LIN_F'],
@@ -228,6 +228,19 @@ const createRecord = (fields: string[], headers: string[], parentId?: string, cn
     ...(order !== undefined && { _order: order }),
   };
   headers.forEach((header, index) => {
+    // For F100, F120, and F600, the last header is a temporary CNPJ.
+    // If we're creating one of these, we fill the CNPJ from the one passed in.
+    const recordType = fields[0];
+    if ( (recordType === 'F100' || recordType === 'F120' || recordType === 'F600') && header === 'CNPJ') {
+        record[header] = cnpj;
+        return;
+    }
+    // For F600, we map the temp CNPJ to CNPJ_F010.
+    if (recordType === 'F600' && header === 'CNPJ_F010') {
+      record[header] = cnpj;
+      return;
+    }
+
     record[header] = fields[index] || '';
   });
   return record;
@@ -261,22 +274,23 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
         
         if (parentType) {
             // Logic for child records: insert after the last related record (parent or sibling)
-            const familyTypes = new Set(recordHierarchy[parentType] || []);
-            familyTypes.add(parentType);
+            let lastFamilyIndex = -1;
             for (let i = finalExportList.length - 1; i >= 0; i--) {
-                const currentRecType = String(finalExportList[i].REG);
-                if (familyTypes.has(currentRecType)) {
-                     // Check if it's the right parent, if parent info is available
-                    if (newRec._parentId && finalExportList[i]._id === newRec._parentId) {
-                        insertionIndex = i + 1;
-                        break;
+                const currentRec = finalExportList[i];
+                 if (currentRec._id === newRec._parentId) {
+                    lastFamilyIndex = i;
+                    const childrenOfParent = finalExportList.filter(rec => rec._parentId === newRec._parentId);
+                    if (childrenOfParent.length > 0) {
+                        const lastChild = childrenOfParent[childrenOfParent.length - 1];
+                        lastFamilyIndex = finalExportList.lastIndexOf(lastChild);
                     }
-                    if (!newRec._parentId) { // Fallback for children added without explicit parent
-                        insertionIndex = i + 1;
-                        break;
-                    }
+                    break;
                 }
             }
+            if (lastFamilyIndex !== -1) {
+                insertionIndex = lastFamilyIndex + 1;
+            }
+
         } else {
             // Logic for parent/standalone records: insert in order within its block
             const block = recordType.charAt(0);
@@ -326,15 +340,12 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
         blockCounters[block]++;
     });
 
-    const totalLines = finalExportList.length;
 
     // 5. Generate the final text string, injecting the correct counts
     let efdText = '';
     for (const record of finalExportList) {
         const reg = String(record.REG);
-        const headers = RECORD_DEFINITIONS[reg];
-        if (!headers) continue;
-
+        
         const recordToWrite = { ...record }; 
 
         if (reg.endsWith('990') && reg.length === 4) {
@@ -350,10 +361,21 @@ export const exportRecordsToEfdText = (records: { [key: string]: EfdRecord[] }):
         }
         
         if (reg === '9999') {
-            recordToWrite.QTD_LIN = String(totalLines);
+             // Total lines includes the 9999 record itself.
+            recordToWrite.QTD_LIN = String(finalExportList.length);
         }
         
-        const fieldsToJoin = headers.map(field => recordToWrite[field] ?? '');
+        const headers = RECORD_DEFINITIONS[reg];
+        if (!headers) continue;
+
+        // Exclude the visual-only CNPJ field from export for specific records
+        const finalHeaders = headers.filter(h => {
+          if ((reg === 'F100' || reg === 'F120') && h === 'CNPJ') return false;
+          if (reg === 'F600' && h === 'CNPJ_F010') return false;
+          return true;
+        });
+
+        const fieldsToJoin = finalHeaders.map(field => recordToWrite[field] ?? '');
         
         const line = fieldsToJoin.join('|');
         efdText += `|${line}|\n`;
@@ -528,6 +550,8 @@ export const parseEfdFile = async (content: string): Promise<{ [key: string]: Ef
         currentCnpj = fields[1];
     }
     
+    // For F-block, CNPJ comes from F010. For others, it might be C010, D010 etc.
+    // The logic correctly picks up the last seen '...010' CNPJ.
     const recordCnpj = recordType === '0140' ? fields[2] : currentCnpj;
     
     const record = createRecord(fields, headers, parentId, recordCnpj, i);
