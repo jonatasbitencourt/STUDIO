@@ -16,7 +16,7 @@ const generateId = (): string => {
     return `id_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 }
 
-const RECORD_DEFINITIONS: { [key: string]: string[] } = {
+export const RECORD_DEFINITIONS: { [key: string]: string[] } = {
   '0000': ['REG', 'COD_VER', 'TIPO_ESCRIT', 'IND_SIT_ESP', 'NUM_REC_ANTERIOR', 'DT_INI', 'DT_FIN', 'NOME', 'CNPJ', 'UF', 'COD_MUN', 'SUFRAMA', 'IND_NAT_PJ', 'IND_ATIV'],
   '0001': ['REG', 'IND_MOV'],
   '0035': ['REG', 'COD_SCP', 'DESC_SCP', 'INF_COMP'],

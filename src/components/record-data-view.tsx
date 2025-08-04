@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { RECORD_DEFINITIONS } from "@/lib/efd-client-parser";
 
 
 interface RecordDataViewProps {
@@ -156,10 +157,17 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
   const handleAddRow = useCallback(() => {
     const newRecord: EfdRecord = { REG: recordType, _id: `new_${Date.now()}` };
     const templateRecord = records.length > 0 ? records[0] : null;
+    const headers = RECORD_DEFINITIONS[recordType] || [];
     
     if (templateRecord) {
         Object.keys(templateRecord).forEach(header => {
             if (header !== 'REG' && header !== '_id' && header !== '_parentId' && header !== '_cnpj' && header !== '_order') {
+                newRecord[header] = '';
+            }
+        });
+    } else { // Handle case where there are no records yet
+        headers.forEach(header => {
+            if (header !== 'REG') {
                 newRecord[header] = '';
             }
         });
@@ -202,7 +210,13 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
 
 
 
-  const headers = useMemo(() => (records.length > 0 ? Object.keys(records[0]).filter(h => h !== '_id' && h !== '_parentId' && h !== '_cnpj' && h !== '_order') : []), [records]);
+  const headers = useMemo(() => {
+    if (records.length > 0) {
+      return Object.keys(records[0]).filter(h => h !== '_id' && h !== '_parentId' && h !== '_cnpj' && h !== '_order');
+    }
+    // If no records, get headers from definition
+    return RECORD_DEFINITIONS[recordType]?.filter(h => h !== 'REG') || [];
+  }, [records, recordType]);
 
   const filteredRecords = useMemo(() => {
     if (!filterValue.trim()) {
@@ -236,25 +250,86 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
   const handlePrevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1));
   const handleNextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages));
 
-  if (!recordType || records.length === 0 && paginatedRecords.length === 0) {
-    const showAddButton = !recordType.startsWith('0') && !recordType.startsWith('A') && !recordType.startsWith('C') && !recordType.startsWith('D');
+  if (!recordType) {
     return (
       <Card className="shadow-neumo border-none rounded-2xl h-[400px] flex items-center justify-center">
         <div className="text-center text-muted-foreground space-y-4">
             <Info className="mx-auto h-10 w-10"/>
-            <div>
-              <p className="font-semibold">Nenhum registro encontrado para {recordType}</p>
-              <p className="text-sm">Carregue um arquivo ou adicione um novo registro.</p>
-            </div>
-             {showAddButton && (
-                <Button onClick={handleAddRow} className="shadow-neumo active:shadow-neumo-inset rounded-xl">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Adicionar Primeiro Registro
-                </Button>
-             )}
+            <p className="font-semibold">Selecione um registro para visualizar</p>
         </div>
       </Card>
     );
+  }
+
+  // New logic for empty state: Show table headers and add buttons
+  if (records.length === 0 && paginatedRecords.length === 0) {
+      return (
+          <Card className="shadow-neumo border-none rounded-2xl h-[calc(100vh-10rem)] flex flex-col">
+              <CardHeader>
+                  <CardTitle>Dados do Registro: {recordType}</CardTitle>
+                  <CardDescription>
+                      Nenhum registro encontrado para {recordType}. Adicione um novo registro ou cole do Excel.
+                  </CardDescription>
+              </CardHeader>
+              <CardContent className="flex-grow overflow-hidden">
+                  <ScrollArea className="h-full">
+                      <Table className="w-max">
+                          <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-10">
+                              <TableRow>
+                                  <TableHead className="sticky left-0 bg-background z-30 h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">Ações</TableHead>
+                                  {headers.map(header => (
+                                      <TableHead key={header} className="h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">{header}</TableHead>
+                                  ))}
+                              </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                              <TableRow>
+                                  <TableCell colSpan={headers.length + 1} className="h-24 text-center">
+                                      Nenhum registro.
+                                  </TableCell>
+                              </TableRow>
+                          </TableBody>
+                      </Table>
+                  </ScrollArea>
+              </CardContent>
+              <CardFooter className="border-t pt-4 justify-end items-center">
+                  <div className="flex items-center space-x-2">
+                      {canBatchAdd && (
+                          <Button onClick={() => setIsBatchAddDialogOpen(true)} className="shadow-neumo active:shadow-neumo-inset rounded-xl">
+                              <ClipboardPaste className="mr-2 h-4 w-4" />
+                              Colar do Excel
+                          </Button>
+                      )}
+                      {!recordType.startsWith('0') && !recordType.startsWith('A') && !recordType.startsWith('C') && !recordType.startsWith('D') && (
+                          <Button onClick={handleAddRow} className="shadow-neumo active:shadow-neumo-inset rounded-xl">
+                              <PlusCircle className="mr-2 h-4 w-4" />
+                              Adicionar
+                          </Button>
+                      )}
+                  </div>
+              </CardFooter>
+              <Dialog open={isBatchAddDialogOpen} onOpenChange={setIsBatchAddDialogOpen}>
+                <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                    <DialogTitle>Adicionar Registros {recordType} em Lote</DialogTitle>
+                    <DialogDescription>
+                        Copie as colunas do Excel e cole abaixo. As colunas devem estar na ordem: {BATCH_ADD_CONFIG[recordType]?.headers.join(', ')}.
+                    </DialogDescription>
+                    </DialogHeader>
+                    <Textarea
+                    value={batchAddText}
+                    onChange={(e) => setBatchAddText(e.target.value)}
+                    placeholder="Cole os dados aqui..."
+                    className="min-h-[200px]"
+                    />
+                    <DialogFooter>
+                    <Button onClick={() => setIsBatchAddDialogOpen(false)} variant="outline">Cancelar</Button>
+                    <Button onClick={handleBatchAdd}>Adicionar Registros</Button>
+                    </DialogFooter>
+                </DialogContent>
+              </Dialog>
+          </Card>
+      );
   }
 
   return (

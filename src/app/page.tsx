@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import type { ParsedEfdData, EfdRecord } from '@/lib/types';
-import { parseEfdFile, recalculateSummaries, exportRecordsToEfdText } from '@/lib/efd-client-parser';
+import { parseEfdFile, recalculateSummaries, exportRecordsToEfdText, RECORD_DEFINITIONS } from '@/lib/efd-client-parser';
 import { useToast } from "@/hooks/use-toast";
 
 import { SidebarProvider, Sidebar, SidebarInset, SidebarHeader, SidebarContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarSeparator, SidebarFooter } from '@/components/ui/sidebar';
@@ -12,11 +12,17 @@ import { FileUploader } from '@/components/file-uploader';
 import { OperationsSummary } from '@/components/operations-summary';
 import { TaxSummary } from '@/components/tax-summary';
 import { RecordDataView } from '@/components/record-data-view';
-import { Loader2, RefreshCw, Download, ChevronRight } from 'lucide-react';
+import { Loader2, RefreshCw, Download, ChevronRight, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { recordHierarchy } from '@/lib/efd-structure';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 
 export default function Home() {
@@ -297,6 +303,35 @@ export default function Home() {
         return newData;
     });
   }, [selectedCnpj, selectedRecord, filterAndSetData]);
+  
+  const handleCreateRecordType = useCallback((recordType: string) => {
+    if (!RECORD_DEFINITIONS[recordType] || allData?.records[recordType]) {
+      toast({
+        variant: "destructive",
+        title: "Registro já existe",
+        description: `O registro ${recordType} já existe no arquivo.`,
+      });
+      return;
+    }
+
+    setAllData(prevAllData => {
+      if (!prevAllData) return null;
+      const newAllDataRecords = {
+        ...prevAllData.records,
+        [recordType]: [],
+      };
+      const newData = { ...prevAllData, records: newAllDataRecords };
+      filterAndSetData(selectedCnpj, newData, recordType);
+      return newData;
+    });
+
+    setSelectedRecord(recordType);
+    setActiveView(null);
+    toast({
+      title: "Registro criado",
+      description: `O registro ${recordType} foi criado. Agora você pode adicionar dados.`,
+    });
+  }, [allData, selectedCnpj, toast, filterAndSetData]);
 
   const handleExport = useCallback(() => {
     if (!data) {
@@ -352,12 +387,13 @@ export default function Home() {
 
     const allRecordTypes = Object.keys(data.records);
     const childRecords = new Set(Object.values(recordHierarchy).flat());
+    const blockOrder = ['0', 'A', 'C', 'D', 'F', 'I', 'M', 'P', '1', '9'];
+
     const parentRecords = allRecordTypes
       .filter(recordType => !childRecords.has(recordType) && recordType !== '0140')
       .sort((a, b) => {
         const blockA = a.charAt(0);
         const blockB = b.charAt(0);
-        const blockOrder = ['0', 'A', 'C', 'D', 'F', 'I', 'M', 'P', '1', '9'];
         const indexA = blockOrder.indexOf(blockA);
         const indexB = blockOrder.indexOf(blockB);
         if (indexA !== indexB) return indexA - indexB;
@@ -535,6 +571,23 @@ export default function Home() {
                       </SelectContent>
                     </Select>
                   )}
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Adicionar Registro
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem onSelect={() => handleCreateRecordType('0500')}>Registro 0500</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleCreateRecordType('A170')}>Registro A170</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleCreateRecordType('C170')}>Registro C170</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleCreateRecordType('F100')}>Registro F100</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleCreateRecordType('F120')}>Registro F120</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleCreateRecordType('F700')}>Registro F700</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
                 <Button onClick={handleExport} variant="outline" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
                   <Download className="mr-2 h-4 w-4" />
                   Exportar Arquivo
