@@ -405,11 +405,11 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
             </div>
         </div>
       </CardHeader>
-      <CardContent className="flex-grow overflow-auto p-0">
+      <CardContent className="flex-grow overflow-auto">
           <Table className="w-max relative">
             <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-40">
               <TableRow>
-                <TableHead className="sticky left-0 bg-background z-30 h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">Ações</TableHead>
+                <TableHead className="sticky left-0 bg-background h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">Ações</TableHead>
                 {headers.map(header => (
                   <TableHead key={header} className="h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">{header}</TableHead>
                 ))}
@@ -464,10 +464,3 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
     </Card>
   );
 }
-    
-
-    
-
-    
-
-    
