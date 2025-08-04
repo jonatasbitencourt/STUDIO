@@ -1,6 +1,5 @@
 {
   "firebase_hosting": {
     "deploymentHostingUrl": "https://efd-contrib.web.app"
-  },
-  "cloud_run_deploy": {}
+  }
 }
