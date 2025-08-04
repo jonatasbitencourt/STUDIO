@@ -155,7 +155,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
     setFilterColumn('');
     setFilterInputValue('');
     setFilterValue('');
-  }, [recordType, records]); // Reset filters if recordType or base records change
+  }, [recordType]); // Reset filters only if recordType changes
 
 
   const handleRowCommit = useCallback((updatedRecord: EfdRecord) => {
