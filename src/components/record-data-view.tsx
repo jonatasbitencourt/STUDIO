@@ -160,33 +160,39 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
 
   const handleRowCommit = useCallback((updatedRecord: EfdRecord) => {
       onRecordsUpdate([updatedRecord], recordType);
-  }, [onRecordsUpdate, recordType]);
+      toast({
+          title: "Alteração em Rascunho",
+          description: "A linha foi atualizada. Clique em 'Processar Alterações' para salvar.",
+          duration: 3000
+      });
+  }, [onRecordsUpdate, recordType, toast]);
 
   const handleDeleteRow = useCallback((recordToDelete: EfdRecord) => {
      onRecordDelete(recordToDelete);
-  }, [onRecordDelete]);
+     toast({
+        title: "Exclusão em Rascunho",
+        description: "A linha foi marcada para exclusão. Clique em 'Processar Alterações' para salvar.",
+        duration: 3000
+    });
+  }, [onRecordDelete, toast]);
 
   const handleAddRow = useCallback(() => {
     const newRecord: EfdRecord = { REG: recordType, _id: `new_${Date.now()}` };
-    const templateRecord = records.length > 0 ? records[0] : null;
     const headers = RECORD_DEFINITIONS[recordType] || [];
     
-    if (templateRecord) {
-        Object.keys(templateRecord).forEach(header => {
-            if (header !== 'REG' && header !== '_id' && header !== '_parentId' && header !== '_cnpj' && header !== '_order') {
-                newRecord[header] = '';
-            }
-        });
-    } else { // Handle case where there are no records yet
-        headers.forEach(header => {
-            if (header !== 'REG') {
-                newRecord[header] = '';
-            }
-        });
-    }
+    headers.forEach(header => {
+        if (header !== 'REG') {
+            newRecord[header] = '';
+        }
+    });
 
     onRecordsUpdate([newRecord], recordType);
-  }, [records, onRecordsUpdate, recordType]);
+    toast({
+        title: "Adição em Rascunho",
+        description: "Uma nova linha foi adicionada. Clique em 'Processar Alterações' para salvar.",
+        duration: 3000
+    });
+  }, [onRecordsUpdate, recordType, toast]);
 
 
    const handleBatchAdd = useCallback(() => {
@@ -215,7 +221,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
 
     onRecordsUpdate(newRecords, recordType);
 
-    toast({ title: "Sucesso!", description: `${newRecords.length} registro(s) adicionado(s) com sucesso.` });
+    toast({ title: "Adição em Rascunho", description: `${newRecords.length} registro(s) adicionado(s) ao rascunho. Clique em 'Processar Alterações' para salvar.` });
     setBatchAddText('');
     setIsBatchAddDialogOpen(false);
   }, [batchAddText, recordType, onRecordsUpdate, toast]);
@@ -223,13 +229,12 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
 
 
   const headers = useMemo(() => {
-    const allHeaders = RECORD_DEFINITIONS[recordType] || [];
     if (records.length > 0) {
       // Get headers from the first record but filter out internal ones
       return Object.keys(records[0]).filter(h => h !== '_id' && h !== '_parentId' && h !== '_cnpj' && h !== '_order');
     }
     // If no records, get headers from definition and include REG
-    return ['REG', ...allHeaders.filter(h => h !== 'REG')];
+    return ['REG', ...RECORD_DEFINITIONS[recordType] || []];
   }, [records, recordType]);
 
   const filteredRecords = useMemo(() => {

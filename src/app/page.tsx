@@ -12,7 +12,7 @@ import { FileUploader } from '@/components/file-uploader';
 import { OperationsSummary } from '@/components/operations-summary';
 import { TaxSummary } from '@/components/tax-summary';
 import { RecordDataView } from '@/components/record-data-view';
-import { Loader2, RefreshCw, Download, ChevronRight, PlusCircle } from 'lucide-react';
+import { Loader2, RefreshCw, Download, ChevronRight, PlusCircle, CheckSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { recordHierarchy } from '@/lib/efd-structure';
@@ -28,6 +28,7 @@ import {
 export default function Home() {
   const [allData, setAllData] = useState<ParsedEfdData | null>(null);
   const [data, setData] = useState<ParsedEfdData | null>(null);
+  const [draftData, setDraftData] = useState<ParsedEfdData['records'] | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeView, setActiveView] = useState<'entradas' | 'saidas' | 'apuracao_pis' | 'apuracao_cofins' | 'estabelecimentos' | null>('entradas');
@@ -51,7 +52,6 @@ export default function Home() {
 
     setIsProcessing(true);
 
-    // Use setTimeout to ensure the UI updates to show "Processing..." before the heavy work begins.
     setTimeout(() => {
         const reader = new FileReader();
 
@@ -83,6 +83,7 @@ export default function Home() {
 
                 setAllData(finalData);
                 setData(finalData);
+                setDraftData(finalData.records);
                 setActiveView('entradas');
                 setSelectedRecord(null);
                 setSelectedCnpj('all');
@@ -130,100 +131,102 @@ export default function Home() {
     return allData.records[recordType].some(r => r.hasOwnProperty('_cnpj'));
   }, [allData, activeView]);
 
-  const filterAndSetData = useCallback(async (cnpj: string, currentAllData: ParsedEfdData, currentSelectedRecord: string | null) => {
-      if (!currentAllData) return;
+  const handleProcessChanges = useCallback(async () => {
+      if (!draftData || !allData) return;
   
       setIsProcessing(true);
+      await new Promise(res => setTimeout(res, 0)); // Yield to main thread to show loader
   
       try {
-        if (cnpj === 'all') {
-            const newSummaries = await recalculateSummaries(currentAllData.records);
-            setData({
-                records: currentAllData.records,
-                ...newSummaries
-            });
-            if (currentSelectedRecord && !canRecordTypeBeFiltered(currentSelectedRecord, true)) {
-                setSelectedRecord(null);
-                setActiveView('entradas');
-            }
-            return;
-        }
-    
-        const relevantItemCodes = new Set<string>();
-        const relevantParticipantCodes = new Set<string>();
-    
-        for (const type in currentAllData.records) {
-            const recordsOfType = currentAllData.records[type];
-            if (!recordsOfType) continue;
-    
-            recordsOfType.forEach(r => {
-                if (r._cnpj === cnpj) {
-                    if (r.COD_ITEM) relevantItemCodes.add(String(r.COD_ITEM));
-                    if (r.COD_PART) relevantParticipantCodes.add(String(r.COD_PART));
-                }
-            });
-        }
-    
-        const newRecords: { [key: string]: EfdRecord[] } = {};
-    
-        for (const type in currentAllData.records) {
-            const recordsOfType = currentAllData.records[type];
-            if (!recordsOfType || recordsOfType.length === 0) continue;
-    
-            let kept: EfdRecord[];
-    
-            if (type === '0150') {
-                kept = recordsOfType.filter(r => relevantParticipantCodes.has(String(r.COD_PART!)));
-            } else if (type === '0200') {
-                kept = recordsOfType.filter(r => relevantItemCodes.has(String(r.COD_ITEM!)));
-            } else {
-                kept = recordsOfType.filter(r => !r.hasOwnProperty('_cnpj') || r._cnpj === cnpj);
-            }
-    
-            if (kept.length > 0) {
-                newRecords[type] = kept;
-            }
-        }
-    
-        ['A', 'C', 'D', 'F', 'I', 'M', 'P'].forEach(block => {
-            const openerType = `${block}001`;
-            const originalOpener = currentAllData.records[openerType]?.[0];
-    
-            if (originalOpener) {
-                const hasData = Object.keys(newRecords).some(type => type.startsWith(block) && type !== openerType);
-                if (newRecords[openerType]) {
-                    newRecords[openerType] = [{ ...newRecords[openerType][0], IND_MOV: hasData ? '0' : '1' }];
-                } else if (currentAllData.records[openerType]) {
-                    newRecords[openerType] = [{ ...currentAllData.records[openerType][0], IND_MOV: hasData ? '0' : '1' }];
-                }
-            }
-        });
-    
-        const newSummaries = await recalculateSummaries(newRecords);
-        setData({
-            records: newRecords,
-            ...newSummaries,
-        });
-    
-        if (currentSelectedRecord && !newRecords[currentSelectedRecord]) {
-            setSelectedRecord(null);
-            setActiveView('entradas');
-        }
+          // 1. Update allData with draftData
+          const newAllData = { ...allData, records: draftData };
+          setAllData(newAllData);
+  
+          // 2. Recalculate summaries based on the new allData
+          const newSummaries = await recalculateSummaries(draftData);
+  
+          // 3. Filter the new data based on the current CNPJ selection
+          if (selectedCnpj === 'all') {
+              setData({ records: draftData, ...newSummaries });
+          } else {
+              const relevantItemCodes = new Set<string>();
+              const relevantParticipantCodes = new Set<string>();
+  
+              for (const type in draftData) {
+                  const recordsOfType = draftData[type];
+                  if (!recordsOfType) continue;
+  
+                  recordsOfType.forEach(r => {
+                      if (r._cnpj === selectedCnpj) {
+                          if (r.COD_ITEM) relevantItemCodes.add(String(r.COD_ITEM));
+                          if (r.COD_PART) relevantParticipantCodes.add(String(r.COD_PART));
+                      }
+                  });
+              }
+  
+              const newRecords: { [key: string]: EfdRecord[] } = {};
+  
+              for (const type in draftData) {
+                  const recordsOfType = draftData[type];
+                  if (!recordsOfType || recordsOfType.length === 0) continue;
+  
+                  let kept: EfdRecord[];
+  
+                  if (type === '0150') {
+                      kept = recordsOfType.filter(r => relevantParticipantCodes.has(String(r.COD_PART!)));
+                  } else if (type === '0200') {
+                      kept = recordsOfType.filter(r => relevantItemCodes.has(String(r.COD_ITEM!)));
+                  } else {
+                      kept = recordsOfType.filter(r => !r.hasOwnProperty('_cnpj') || r._cnpj === selectedCnpj);
+                  }
+  
+                  if (kept.length > 0) {
+                      newRecords[type] = kept;
+                  }
+              }
+  
+              ['A', 'C', 'D', 'F', 'I', 'M', 'P'].forEach(block => {
+                  const openerType = `${block}001`;
+                  if (allData.records[openerType]) {
+                      const hasData = Object.keys(newRecords).some(type => type.startsWith(block) && type !== openerType);
+                      const openerRecord = newRecords[openerType]?.[0] || allData.records[openerType][0];
+                      newRecords[openerType] = [{ ...openerRecord, IND_MOV: hasData ? '0' : '1' }];
+                  }
+              });
+  
+              const filteredSummaries = await recalculateSummaries(newRecords);
+              setData({ records: newRecords, ...filteredSummaries });
+          }
+  
+          toast({
+              title: "Alterações Processadas",
+              description: "Todas as suas alterações foram aplicadas com sucesso.",
+          });
+  
+      } catch (err) {
+          console.error("Error processing changes:", err);
+          toast({
+              variant: "destructive",
+              title: "Erro ao Processar",
+              description: "Ocorreu um erro ao aplicar as alterações.",
+          });
       } finally {
-        setIsProcessing(false);
+          setIsProcessing(false);
       }
-  }, [canRecordTypeBeFiltered]);
+  
+  }, [draftData, allData, selectedCnpj, toast]);
   
   const handleFilterChange = (cnpj: string) => {
-    setSelectedCnpj(cnpj);
-    if (allData) {
-      filterAndSetData(cnpj, allData, selectedRecord);
-    }
+    // Before changing the filter, ask the user to process changes
+    handleProcessChanges().then(() => {
+        setSelectedCnpj(cnpj);
+    });
   };
 
   const handleReset = useCallback(() => {
     setAllData(null);
     setData(null);
+    setDraftData(null);
     setSelectedRecord(null);
     setIsProcessing(false);
     setActiveView('entradas');
@@ -236,11 +239,11 @@ export default function Home() {
   }, []);
   
   const handleRecordsUpdate = useCallback((updatedRecordList: EfdRecord[], recordType: string) => {
-    setAllData(prevAllData => {
-        if (!prevAllData) return null;
+    setDraftData(prevDraftData => {
+        if (!prevDraftData) return null;
 
         const updatedRecordsMap = new Map(updatedRecordList.map(r => [r._id, r]));
-        const originalRecordList = prevAllData.records[recordType] || [];
+        const originalRecordList = prevDraftData[recordType] || [];
 
         const mergedList = originalRecordList.map(
             originalRecord => updatedRecordsMap.get(originalRecord._id) ?? originalRecord
@@ -252,28 +255,22 @@ export default function Home() {
 
         const finalUpdatedList = [...mergedList, ...addedRecords];
 
-        const newAllDataRecords = {
-            ...prevAllData.records,
+        return {
+            ...prevDraftData,
             [recordType]: finalUpdatedList,
         };
-        
-        const newData = { ...prevAllData, records: newAllDataRecords };
-        
-        filterAndSetData(selectedCnpj, newData, selectedRecord);
-
-        return newData;
     });
-  }, [selectedCnpj, selectedRecord, filterAndSetData]);
+  }, []);
 
   const handleRecordDelete = useCallback((recordToDelete: EfdRecord) => {
     if (!recordToDelete._id) return;
     
-    setAllData(prevAllData => {
-        if (!prevAllData) return null;
+    setDraftData(prevDraftData => {
+        if (!prevDraftData) return null;
 
         const idsToDelete = new Set<string>([recordToDelete._id!]);
         const queue: string[] = [recordToDelete._id!];
-        const allRecordsFlat = Object.values(prevAllData.records).flat();
+        const allRecordsFlat = Object.values(prevDraftData).flat();
 
         while (queue.length > 0) {
             const currentParentId = queue.shift()!;
@@ -288,50 +285,43 @@ export default function Home() {
             }
         }
 
-        const newAllDataRecords: { [key: string]: EfdRecord[] } = {};
-        for (const type in prevAllData.records) {
-            const keptRecords = prevAllData.records[type].filter(r => r._id && !idsToDelete.has(r._id));
+        const newDraftRecords: { [key: string]: EfdRecord[] } = {};
+        for (const type in prevDraftData) {
+            const keptRecords = prevDraftData[type].filter(r => r._id && !idsToDelete.has(r._id));
             if (keptRecords.length > 0) {
-                newAllDataRecords[type] = keptRecords;
+                newDraftRecords[type] = keptRecords;
             }
         }
         
-        const newData = { ...prevAllData, records: newAllDataRecords };
-        
-        filterAndSetData(selectedCnpj, newData, selectedRecord);
-
-        return newData;
+        return newDraftRecords;
     });
-  }, [selectedCnpj, selectedRecord, filterAndSetData]);
+  }, []);
   
   const handleCreateRecordType = useCallback((recordType: string) => {
-    if (!RECORD_DEFINITIONS[recordType] || allData?.records[recordType]) {
+    if (!RECORD_DEFINITIONS[recordType] || draftData?.[recordType]) {
       toast({
         variant: "destructive",
         title: "Registro já existe",
-        description: `O registro ${recordType} já existe no arquivo.`,
+        description: `O registro ${recordType} já existe no rascunho.`,
       });
       return;
     }
 
-    setAllData(prevAllData => {
-      if (!prevAllData) return null;
-      const newAllDataRecords = {
-        ...prevAllData.records,
+    setDraftData(prevDraftData => {
+      if (!prevDraftData) return null;
+      return {
+        ...prevDraftData,
         [recordType]: [],
       };
-      const newData = { ...prevAllData, records: newAllDataRecords };
-      filterAndSetData(selectedCnpj, newData, recordType);
-      return newData;
     });
 
     setSelectedRecord(recordType);
     setActiveView(null);
     toast({
-      title: "Registro criado",
-      description: `O registro ${recordType} foi criado. Agora você pode adicionar dados.`,
+      title: "Registro criado no rascunho",
+      description: `O registro ${recordType} foi criado. Adicione dados e depois clique em 'Processar Alterações'.`,
     });
-  }, [allData, selectedCnpj, toast, filterAndSetData]);
+  }, [draftData, toast]);
 
   const handleExport = useCallback(() => {
     if (!data) {
@@ -381,11 +371,11 @@ export default function Home() {
   }, [data, establishmentRecords.length, selectedRecord, activeView, canRecordTypeBeFiltered]);
   
   const sidebarContent = useMemo(() => {
-    if (!isMounted || !data) {
+    if (!isMounted || !draftData) {
       return null;
     }
 
-    const allRecordTypes = Object.keys(data.records);
+    const allRecordTypes = Object.keys(draftData);
     const childRecords = new Set(Object.values(recordHierarchy).flat());
     const blockOrder = ['0', 'A', 'C', 'D', 'F', 'I', 'M', 'P', '1', '9'];
 
@@ -514,7 +504,7 @@ export default function Home() {
         </SidebarMenu>
       </SidebarContent>
     );
-  }, [isMounted, data, activeView, selectedRecord, handleSelectView]);
+  }, [isMounted, draftData, activeView, selectedRecord, handleSelectView]);
 
 
   return (
@@ -534,7 +524,7 @@ export default function Home() {
         {isProcessing && (
           <div className="flex flex-col gap-4 items-center justify-center h-full">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            <p className="text-muted-foreground">Processando arquivo...</p>
+            <p className="text-muted-foreground">Processando...</p>
           </div>
         )}
 
@@ -572,6 +562,11 @@ export default function Home() {
                     </Select>
                   )}
                  {activeView === 'estabelecimentos' && (
+                  <>
+                    <Button onClick={handleProcessChanges} variant="default" className="shadow-neumo active:shadow-neumo-inset rounded-xl bg-green-500 hover:bg-green-600">
+                      <CheckSquare className="mr-2 h-4 w-4" />
+                      Processar Alterações
+                    </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="outline" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
@@ -590,6 +585,7 @@ export default function Home() {
                         <DropdownMenuItem onSelect={() => handleCreateRecordType('1700')}>Registro 1700</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                  </>
                  )}
 
                 <Button onClick={handleExport} variant="outline" className="shadow-neumo active:shadow-neumo-inset rounded-xl">
@@ -607,7 +603,7 @@ export default function Home() {
               <RecordDataView
                 key={`${selectedCnpj}-${selectedRecord}`}
                 recordType={selectedRecord}
-                records={data.records[selectedRecord] || []}
+                records={draftData?.[selectedRecord] || []}
                 onRecordsUpdate={handleRecordsUpdate}
                 onRecordDelete={handleRecordDelete}
               />
@@ -617,7 +613,7 @@ export default function Home() {
                    <RecordDataView
                       key={`all-data-0140-${selectedCnpj}`}
                       recordType="0140"
-                      records={data.records['0140'] || []}
+                      records={draftData?.['0140'] || []}
                       onRecordsUpdate={(updatedRecords) => handleRecordsUpdate(updatedRecords, '0140')}
                       onRecordDelete={(record) => handleRecordDelete(record)}
                    />
