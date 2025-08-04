@@ -296,7 +296,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
               <CardContent className="flex-grow overflow-hidden">
                   <ScrollArea className="h-full">
                       <Table className="w-max">
-                          <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-10">
+                          <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm">
                               <TableRow>
                                   <TableHead className="sticky left-0 bg-background z-30 h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">Ações</TableHead>
                                   {headers.map(header => (
@@ -400,7 +400,7 @@ export function RecordDataView({ recordType, records, onRecordsUpdate, onRecordD
       <CardContent className="flex-grow overflow-hidden">
         <ScrollArea className="h-full">
             <Table className="w-max">
-              <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm z-10">
+              <TableHeader className="sticky top-0 bg-background/90 backdrop-blur-sm">
                 <TableRow>
                   <TableHead className="sticky left-0 bg-background z-30 h-auto font-bold text-[8px] px-1 py-0.5 whitespace-nowrap">Ações</TableHead>
                   {headers.map(header => (
